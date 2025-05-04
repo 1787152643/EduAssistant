@@ -70,7 +70,7 @@
                     <div class="card border-light bg-light">
                         <div class="card-body">
                             <h5>提交状态</h5>
-                            {% if student_assignment.answer %}
+                            {% if student_assignment and student_assignment.submitted_at %}
                                 {% if student_assignment.completed %}
                                 <div class="alert alert-success">
                                     <i class="fas fa-check-circle me-2"></i>您已完成此作业
@@ -81,21 +81,11 @@
                                     <i class="fas fa-clock me-2"></i>已提交，等待评分
                                     <p class="mb-0 mt-2"><strong>提交时间:</strong> {{ student_assignment.submitted_at.strftime('%Y-%m-%d %H:%M') }}</p>
                                 </div>
-                            {% endif %}
+                                {% endif %}
                             {% else %}
                             <div class="alert alert-danger">
                                 <i class="fas fa-exclamation-circle me-2"></i>尚未提交
                             </div>
-                            <form method="post" action="{{ url_for('course.submit_assignment', assignment_id=assignment.id) }}">
-                                <div class="mb-3">
-                                    <label for="assignment_content" class="form-label">作业内容</label>
-                                    <textarea id="assignment_content" name="content" class="form-control" rows="8" required></textarea>
-                                    <small class="text-muted">请在此处输入您的作业内容</small>
-                                </div>
-                                <div class="d-grid">
-                                    <button type="submit" class="btn btn-primary">提交作业</button>
-                                </div>
-                            </form>
                             {% endif %}
                         </div>
                     </div>
@@ -103,6 +93,137 @@
                 {% endif %}
             </div>
         </div>
+        
+        <!-- 问题列表 -->
+        {% if questions %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i>问题列表</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('course.submit_assignment', assignment_id=assignment.id) }}">
+                    {% for question in questions %}
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                {% if question.question_type == 'multiple_choice' %}
+                                <span class="badge bg-success me-2">选择题</span>
+                                {% elif question.question_type == 'fill_in_blank' %}
+                                <span class="badge bg-primary me-2">填空题</span>
+                                {% elif question.question_type == 'short_answer' %}
+                                <span class="badge bg-info me-2">简答题</span>
+                                {% endif %}
+                                <strong>{{ loop.index }}. </strong>
+                            </div>
+                            <span class="badge bg-secondary">{{ question.points }} 分</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <p>{{ question.question_text }}</p>
+                            </div>
+                            
+                            <!-- 不同类型问题的回答界面 -->
+                            {% if question.question_type == 'multiple_choice' and question.options %}
+                            <div class="mb-3">
+                                {% for option in question.options %}
+                                <div class="form-check">
+                                    <input 
+                                        class="form-check-input" 
+                                        type="radio" 
+                                        name="question_{{ question.id }}_option" 
+                                        id="option_{{ question.id }}_{{ option.id }}" 
+                                        value="{{ option.id }}"
+                                        {% if student_responses and question.id in student_responses and student_responses[question.id].selected_option_id == option.id %}checked{% endif %}
+                                        {% if student_assignment and student_assignment.submitted_at %}disabled{% endif %}
+                                    >
+                                    <label class="form-check-label" for="option_{{ question.id }}_{{ option.id }}">
+                                        {{ option.option_text }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% elif question.question_type == 'fill_in_blank' %}
+                            <div class="mb-3">
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    name="question_{{ question.id }}_answer" 
+                                    placeholder="输入您的答案..."
+                                    value="{% if student_responses and question.id in student_responses %}{{ student_responses[question.id].answer_text }}{% endif %}"
+                                    {% if student_assignment and student_assignment.submitted_at %}readonly{% endif %}
+                                >
+                            </div>
+                            {% elif question.question_type == 'short_answer' %}
+                            <div class="mb-3">
+                                <textarea 
+                                    class="form-control" 
+                                    name="question_{{ question.id }}_answer" 
+                                    rows="3" 
+                                    placeholder="输入您的答案..."
+                                    {% if student_assignment and student_assignment.submitted_at %}readonly{% endif %}
+                                >{% if student_responses and question.id in student_responses %}{{ student_responses[question.id].answer_text }}{% endif %}</textarea>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- 已评分问题的分数和反馈 -->
+                            {% if student_responses and question.id in student_responses and student_responses[question.id].score is not none %}
+                            <div class="mt-3 p-3 border rounded bg-light">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <strong>得分:</strong>
+                                    <span class="badge bg-primary">{{ student_responses[question.id].score }} / {{ question.points }}</span>
+                                </div>
+                                {% if student_responses[question.id].feedback %}
+                                <div>
+                                    <strong>反馈:</strong>
+                                    <p class="mb-0 mt-1">{{ student_responses[question.id].feedback }}</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <!-- 兼容旧版的纯文本回答 -->
+                    {% if not questions %}
+                    <div class="mb-3">
+                        <label for="assignment_content" class="form-label">作业内容</label>
+                        <textarea id="assignment_content" name="content" class="form-control" rows="8" required {% if student_assignment and student_assignment.submitted_at %}readonly{% endif %}>{{ student_assignment.answer if student_assignment and student_assignment.answer else '' }}</textarea>
+                        <small class="text-muted">请在此处输入您的作业内容</small>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- 提交按钮 -->
+                    {% if not student_assignment or not student_assignment.submitted_at %}
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">提交作业</button>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+        {% elif not is_teacher %}
+        <!-- 没有问题但学生需要提交作业的情况 -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>提交作业</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('course.submit_assignment', assignment_id=assignment.id) }}">
+                    <div class="mb-3">
+                        <label for="assignment_content" class="form-label">作业内容</label>
+                        <textarea id="assignment_content" name="content" class="form-control" rows="8" required {% if student_assignment and student_assignment.submitted_at %}readonly{% endif %}>{{ student_assignment.answer if student_assignment and student_assignment.answer else '' }}</textarea>
+                        <small class="text-muted">请在此处输入您的作业内容</small>
+                    </div>
+                    {% if not student_assignment or not student_assignment.submitted_at %}
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">提交作业</button>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+        {% endif %}
     </div>
     
     <div class="col-md-4">

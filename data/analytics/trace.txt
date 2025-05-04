@@ -71,134 +71,150 @@ Question:
        'assignment_title', 'assignment_id', 'score', 'submitted_at',
        'attempts', 'total_points', 'teacher_name'],
       dtype='object')
-    问题: 请根据小测和期中测试成绩分布评估课程AI201中学生的学习情况。
+    问题: 请根据小测和期中测试成绩分布评估课程CS101中学生的学习情况。
     
-Running query: `df[df['course_code'] == 'AI201']`
+Running query: `df[df['course_code'] == 'CS101'][['assignment_title', 'score']]`
 Query result: 
-   student_name  student_id  ... total_points        teacher_name
-0         Li Na           8  ...         50.0  Professor Wang Jun
-1      Zhao Min          10  ...         50.0  Professor Wang Jun
-2      Zhang Yu          13  ...         50.0  Professor Wang Jun
-3       Sun Wei          15  ...         50.0  Professor Wang Jun
-4      Lin Feng          18  ...         50.0  Professor Wang Jun
-5       Feng Yi          22  ...         50.0  Professor Wang Jun
-6      Cao Jing          23  ...         50.0  Professor Wang Jun
-7     Tang Juan          25  ...         50.0  Professor Wang Jun
-8      Hu Qiang          26  ...         50.0  Professor Wang Jun
-9         Li Na           8  ...         50.0  Professor Wang Jun
-10     Zhao Min          10  ...         50.0  Professor Wang Jun
-11     Zhang Yu          13  ...         50.0  Professor Wang Jun
-12      Sun Wei          15  ...         50.0  Professor Wang Jun
-13     Lin Feng          18  ...         50.0  Professor Wang Jun
-14      Feng Yi          22  ...         50.0  Professor Wang Jun
-15     Cao Jing          23  ...         50.0  Professor Wang Jun
-16    Tang Juan          25  ...         50.0  Professor Wang Jun
-17     Hu Qiang          26  ...         50.0  Professor Wang Jun
-18     Zhang Yu          13  ...        100.0  Professor Wang Jun
-19      Sun Wei          15  ...        100.0  Professor Wang Jun
-20     Lin Feng          18  ...        100.0  Professor Wang Jun
-21      Xu Ming          20  ...        100.0  Professor Wang Jun
-22    Deng Hong          21  ...        100.0  Professor Wang Jun
-23      Feng Yi          22  ...        100.0  Professor Wang Jun
-24     Cao Jing          23  ...        100.0  Professor Wang Jun
-25    Tang Juan          25  ...        100.0  Professor Wang Jun
-26     Hu Qiang          26  ...        100.0  Professor Wang Jun
+          assignment_title  score
+0   Research Paper - CS101  120.0
+1           Quiz 1 - CS101   22.5
+2           Quiz 1 - CS101   24.7
+3           Quiz 1 - CS101   26.5
+4           Quiz 1 - CS101   33.7
+5           Quiz 1 - CS101   34.9
+6           Quiz 1 - CS101   45.5
+7           Quiz 1 - CS101   47.6
+8           Quiz 1 - CS101   21.2
+9           Quiz 1 - CS101   36.8
+10          Quiz 1 - CS101   38.9
+11          Quiz 1 - CS101   33.0
+12          Quiz 1 - CS101   48.2
+13          Quiz 1 - CS101   45.0
+14          Quiz 2 - CS101   33.5
+15          Quiz 2 - CS101   23.2
+16          Quiz 2 - CS101   32.1
+17          Quiz 2 - CS101   46.9
+18          Quiz 2 - CS101   46.8
+19          Quiz 2 - CS101   45.6
+20          Quiz 2 - CS101   14.2
+21          Quiz 2 - CS101   34.4
+22          Quiz 2 - CS101   36.7
+23          Quiz 2 - CS101   46.1
+24          Quiz 2 - CS101   29.8
+25          Quiz 2 - CS101   18.0
+Answer: 根据提供的数据，课程CS101中的小测（Quiz 1和Quiz 2）成绩分布如下：
 
-[27 rows x 12 columns]
-Running query: `df[(df['course_code'] == 'AI201') & (df['assignment_title'].str.contains('小测|期中测试'))]`
-Query result: 
-Empty DataFrame
-Columns: [student_name, student_id, course_name, course_code, course_id, assignment_title, assignment_id, score, submitted_at, attempts, total_points, teacher_name]
-Index: []
-Running query: `df[df['course_code'] == 'AI201']['assignment_title'].unique()`
-Query result: 
-['Quiz 2 - AI201' 'Quiz 1 - AI201' 'Midterm Exam - AI201']
-Running query: `df[(df['course_code'] == 'AI201') & (df['assignment_title'].str.contains('Quiz|Midterm'))]`
-Query result: 
-   student_name  student_id  ... total_points        teacher_name
-0         Li Na           8  ...         50.0  Professor Wang Jun
-1      Zhao Min          10  ...         50.0  Professor Wang Jun
-2      Zhang Yu          13  ...         50.0  Professor Wang Jun
-3       Sun Wei          15  ...         50.0  Professor Wang Jun
-4      Lin Feng          18  ...         50.0  Professor Wang Jun
-5       Feng Yi          22  ...         50.0  Professor Wang Jun
-6      Cao Jing          23  ...         50.0  Professor Wang Jun
-7     Tang Juan          25  ...         50.0  Professor Wang Jun
-8      Hu Qiang          26  ...         50.0  Professor Wang Jun
-9         Li Na           8  ...         50.0  Professor Wang Jun
-10     Zhao Min          10  ...         50.0  Professor Wang Jun
-11     Zhang Yu          13  ...         50.0  Professor Wang Jun
-12      Sun Wei          15  ...         50.0  Professor Wang Jun
-13     Lin Feng          18  ...         50.0  Professor Wang Jun
-14      Feng Yi          22  ...         50.0  Professor Wang Jun
-15     Cao Jing          23  ...         50.0  Professor Wang Jun
-16    Tang Juan          25  ...         50.0  Professor Wang Jun
-17     Hu Qiang          26  ...         50.0  Professor Wang Jun
-18     Zhang Yu          13  ...        100.0  Professor Wang Jun
-19      Sun Wei          15  ...        100.0  Professor Wang Jun
-20     Lin Feng          18  ...        100.0  Professor Wang Jun
-21      Xu Ming          20  ...        100.0  Professor Wang Jun
-22    Deng Hong          21  ...        100.0  Professor Wang Jun
-23      Feng Yi          22  ...        100.0  Professor Wang Jun
-24     Cao Jing          23  ...        100.0  Professor Wang Jun
-25    Tang Juan          25  ...        100.0  Professor Wang Jun
-26     Hu Qiang          26  ...        100.0  Professor Wang Jun
+### Quiz 1 - CS101
+- 成绩范围：21.2 到 48.2
+- 成绩分布较为分散，部分学生表现较好（如48.2分），但也有学生表现较差（如21.2分）。
 
-[27 rows x 12 columns]
-Running query: `df[(df['course_code'] == 'AI201') & (df['assignment_title'].str.contains('Quiz|Midterm'))].groupby(['student_name', 'assignment_title'])['score'].mean()`
-Query result: 
-student_name  assignment_title    
-Cao Jing      Midterm Exam - AI201    79.4
-              Quiz 1 - AI201          35.8
-              Quiz 2 - AI201          38.2
-Deng Hong     Midterm Exam - AI201    84.6
-Feng Yi       Midterm Exam - AI201    59.8
-              Quiz 1 - AI201          41.6
-              Quiz 2 - AI201          38.6
-Hu Qiang      Midterm Exam - AI201    79.3
-              Quiz 1 - AI201          41.1
-              Quiz 2 - AI201          38.7
-Li Na         Quiz 1 - AI201          41.0
-              Quiz 2 - AI201          38.4
-Lin Feng      Midterm Exam - AI201    94.6
-              Quiz 1 - AI201          47.4
-              Quiz 2 - AI201          36.8
-Sun Wei       Midterm Exam - AI201    83.7
-              Quiz 1 - AI201          44.2
-              Quiz 2 - AI201          35.3
-Tang Juan     Midterm Exam - AI201    91.3
-              Quiz 1 - AI201          35.2
-              Quiz 2 - AI201          46.3
-Xu Ming       Midterm Exam - AI201    85.3
-Zhang Yu      Midterm Exam - AI201    87.0
-              Quiz 1 - AI201          50.0
-              Quiz 2 - AI201          37.4
-Zhao Min      Quiz 1 - AI201          39.4
-              Quiz 2 - AI201          33.0
-Name: score, dtype: float64
-Answer: 根据课程 **AI201** 中学生的 **小测（Quiz）** 和 **期中测试（Midterm Exam）** 成绩分布，以下是学生的学习情况评估：
-
-### 期中测试成绩分布
-- **最高分**：94.6（Lin Feng）
-- **最低分**：59.8（Feng Yi）
-- **平均分**：约 83.5（基于部分学生数据）
-- **表现优异的学生**：Lin Feng（94.6）、Tang Juan（91.3）、Zhang Yu（87.0）、Xu Ming（85.3）、Deng Hong（84.6）、Sun Wei（83.7）
-- **表现较差的学生**：Feng Yi（59.8）
-
-### 小测成绩分布
-1. **Quiz 1**：
-   - **最高分**：50.0（Zhang Yu）
-   - **最低分**：35.2（Tang Juan）
-   - **平均分**：约 42.0
-2. **Quiz 2**：
-   - **最高分**：46.3（Tang Juan）
-   - **最低分**：33.0（Zhao Min）
-   - **平均分**：约 38.0
+### Quiz 2 - CS101
+- 成绩范围：14.2 到 46.9
+- 成绩分布同样较广，最低分为14.2，最高分为46.9，显示出较大的学习差异。
 
 ### 综合分析
-- **整体表现**：学生在期中测试中的表现普遍优于小测，尤其是 Lin Feng、Tang Juan 和 Zhang Yu 在期中测试中表现突出。
-- **小测表现**：小测成绩整体偏低，尤其是 Quiz 2，平均分仅为 38.0，部分学生如 Zhao Min 和 Feng Yi 需要加强基础知识的掌握。
-- **需关注的学生**：Feng Yi 在期中测试和小测中表现均不理想，可能需要额外的辅导。
+1. **学习差异**：学生在小测中的表现差异较大，部分学生可能对课程内容掌握较好，而另一部分学生可能需要额外的帮助。
+2. **成绩分布**：Quiz 2的最低分比Quiz 1更低，可能表明部分学生在课程进展中遇到了困难。
+3. **建议**：教师可以针对成绩较低的学生提供额外的辅导或资源，以帮助他们提升学习效果。
 
-如果需要更详细的分析或其他数据，请告知！
+如果需要更详细的统计分析（如平均分、标准差等），可以进一步查询。
+--------------------------------------------------
+Question: 
+    提示：df is about the knowledge point mastery levels of students.
+    dataframe columns: Index(['student_name', 'student_id', 'knowledge_point_name',
+       'knowledge_point_id', 'mastery_level', 'course_name', 'course_code',
+       'course_id', 'teacher_name'],
+      dtype='object')
+    问题: 请分析课程AI201的知识点掌握度薄弱环节
+    
+Running query: `df[df['course_code'] == 'AI201'].groupby('knowledge_point_name')['mastery_level'].mean().sort_values()`
+Query result: 
+knowledge_point_name
+Backpropagation             0.161818
+Supervised Learning         0.170909
+Clustering                  0.173636
+Neural Networks             0.184545
+Perceptrons                 0.190909
+Unsupervised Learning       0.193636
+Activation Functions        0.211818
+Dimensionality Reduction    0.369091
+Evaluation Metrics          0.376364
+Classification              0.416364
+Regression                  0.448182
+Name: mastery_level, dtype: float64
+Answer: 根据分析，课程AI201中知识点掌握度较为薄弱的环节如下（按掌握度从低到高排序）：
+
+1. **Backpropagation** - 平均掌握度: 0.162
+2. **Supervised Learning** - 平均掌握度: 0.171
+3. **Clustering** - 平均掌握度: 0.174
+4. **Neural Networks** - 平均掌握度: 0.185
+5. **Perceptrons** - 平均掌握度: 0.191
+6. **Unsupervised Learning** - 平均掌握度: 0.194
+7. **Activation Functions** - 平均掌握度: 0.212
+8. **Dimensionality Reduction** - 平均掌握度: 0.369
+9. **Evaluation Metrics** - 平均掌握度: 0.376
+10. **Classification** - 平均掌握度: 0.416
+11. **Regression** - 平均掌握度: 0.448
+
+建议重点关注前7个知识点，尤其是**Backpropagation**和**Supervised Learning**，这些是学生掌握度最低的部分。
+--------------------------------------------------
+Question: 
+    提示：df is about the learning activities of students.
+    dataframe columns: Index(['student_name', 'student_id', 'course_name', 'course_code', 'course_id',
+       'activity_type', 'duration', 'timestamp', 'teacher_name'],
+      dtype='object')
+    问题: 在课程CS101中学生更倾向于什么学习活动方式？
+    
+Running query: `df[df['course_code'] == 'CS101'].groupby('activity_type').size().sort_values(ascending=False)`
+Query result: 
+activity_type
+practice_exercise           235
+reading                     220
+quiz_attempt                216
+video_watch                 214
+discussion_participation    195
+page_view                    21
+dtype: int64
+Answer: 在课程CS101中，学生更倾向于以下学习活动方式（按参与次数从高到低排序）：
+
+1. 练习 (practice_exercise) - 235 次
+2. 阅读 (reading) - 220 次
+3. 测验尝试 (quiz_attempt) - 216 次
+4. 视频观看 (video_watch) - 214 次
+5. 讨论参与 (discussion_participation) - 195 次
+6. 页面浏览 (page_view) - 21 次
+
+其中，练习是最受欢迎的学习活动方式。
+--------------------------------------------------
+Question: 
+    提示：df is about the assignments of students.
+    dataframe columns: Index(['student_name', 'student_id', 'course_name', 'course_code', 'course_id',
+       'assignment_title', 'assignment_id', 'score', 'submitted_at',
+       'attempts', 'total_points', 'teacher_name'],
+      dtype='object')
+    问题: 请根据小测成绩分布评估课程CS101中学生的学习情况。
+    
+Running query: `df[df['course_code'] == 'CS101']['score'].describe()`
+Query result: 
+count     26.000000
+mean      37.915385
+std       19.508658
+min       14.200000
+25%       27.325000
+50%       34.650000
+75%       45.575000
+max      120.000000
+Name: score, dtype: float64
+Answer: 在课程CS101中，学生的成绩分布如下：
+
+- 学生人数：26人
+- 平均成绩：37.92分
+- 标准差：19.51分，表明成绩分布较为分散
+- 最低分：14.2分
+- 25%分位数：27.33分
+- 中位数：34.65分
+- 75%分位数：45.58分
+- 最高分：120分
+
+从数据来看，CS101课程的学生成绩分布较广，部分学生的成绩偏低（如最低分为14.2分），但也有学生表现优异（最高分为120分）。中位数低于平均值，说明成绩分布可能偏向低分区域。
 --------------------------------------------------

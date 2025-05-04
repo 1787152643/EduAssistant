@@ -300,6 +300,7 @@ def run(query: str, role: str, history: List) -> str:
     tools =  student_tools if role == "student" \
         else teacher_tools if role == "teacher" \
         else admin_tools
+    #tools = {'learning_analyze': teacher_tools['learning_analyze']}
     for name, tool in tools.items(): 
         agent.register(name, tool['function'], tool['description'])
     for message in history:

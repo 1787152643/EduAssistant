@@ -61,6 +61,51 @@ def get_assignment_performance(student, course, knowledge_point):
     
     return total_score / total_possible
 
+def get_question_performance(student, knowledge_point):
+    """Calculate performance on questions related to a knowledge point."""
+    # Find questions associated with assignments that are linked to this knowledge point
+    assignment_ids = (AssignmentKnowledgePoint
+                     .select(AssignmentKnowledgePoint.assignment)
+                     .where(AssignmentKnowledgePoint.knowledge_point == knowledge_point))
+    
+    # Get all questions from these assignments
+    questions = Question.select().where(Question.assignment.in_(assignment_ids))
+    
+    if not questions.exists():
+        return None
+    
+    # Get student responses for these questions
+    student_assignments = StudentAssignment.select().where(
+        (StudentAssignment.student == student) &
+        (StudentAssignment.assignment.in_(assignment_ids))
+    )
+    
+    if not student_assignments.exists():
+        return None
+    
+    # Get all responses for these student assignments
+    responses = StudentResponse.select().where(
+        (StudentResponse.student_assignment.in_(student_assignments)) &
+        (StudentResponse.question.in_(questions)) &
+        (StudentResponse.score.is_null(False))
+    )
+    
+    if not responses.exists():
+        return None
+    
+    # Calculate average performance on these questions
+    total_score = 0
+    total_possible = 0
+    
+    for response in responses:
+        total_score += response.score
+        total_possible += response.question.points
+    
+    if total_possible == 0:
+        return None
+    
+    return total_score / total_possible
+
 def create_learning_activities():
     """Create realistic learning activities for students."""
     enrollments = get_enrollments()
@@ -126,8 +171,30 @@ def create_learning_activities():
         }
     ]
     
+    # Create a dictionary to track each student's proficiency by knowledge area
+    student_proficiency = {}  # {student_id: {knowledge_point_id: proficiency}}
+    
     # For each enrollment, create multiple learning activities
     for enrollment in enrollments:
+        student_id = enrollment.student.id
+        
+        # Initialize proficiency dictionary for this student if not already done
+        if student_id not in student_proficiency:
+            # Create initial proficiency profiles with varying skill levels
+            # 20% high achievers (0.7-0.95), 60% average (0.4-0.7), 20% struggling (0.1-0.4)
+            profile_type = random.random()
+            if profile_type < 0.2:  # High achievers
+                base_proficiency = random.uniform(0.7, 0.95)
+                variance = 0.15  # Lower variance for high achievers
+            elif profile_type < 0.8:  # Average students
+                base_proficiency = random.uniform(0.4, 0.7)
+                variance = 0.2  # Medium variance for average students
+            else:  # Struggling students
+                base_proficiency = random.uniform(0.1, 0.4)
+                variance = 0.25  # Higher variance for struggling students
+            
+            student_proficiency[student_id] = {'base': base_proficiency, 'variance': variance}
+        
         # Get knowledge points for this course
         knowledge_points = list(KnowledgePoint.select().where(KnowledgePoint.course == enrollment.course))
         
@@ -135,23 +202,58 @@ def create_learning_activities():
             print(f"No knowledge points found for {enrollment.course.name}. Skipping learning activities.")
             continue
         
+        # Set different proficiency levels for different knowledge points for this student
+        for kp in knowledge_points:
+            if kp.id not in student_proficiency[student_id]:
+                # Determine proficiency for this knowledge point based on base proficiency and variance
+                kp_proficiency = max(0.05, min(0.95, 
+                                             student_proficiency[student_id]['base'] + 
+                                             random.uniform(-student_proficiency[student_id]['variance'], 
+                                                           student_proficiency[student_id]['variance'])))
+                
+                student_proficiency[student_id][kp.id] = kp_proficiency
+        
         # Determine student engagement level (affects number of activities)
-        engagement_level = random.uniform(0.3, 1.0)
+        # Engagement correlates somewhat with proficiency but has random variation
+        engagement_level = 0.3 + (student_proficiency[student_id]['base'] * 0.4) + (random.uniform(0, 0.3))
+        engagement_level = min(1.0, engagement_level)
         
         # Create activities spread over the last 90 days
         # More engaged students have more activities
         num_activities = int(10 + (40 * engagement_level))
         
+        # Distribution of activities should reflect proficiency
+        # Students with higher proficiency in a knowledge point will have more activities for that point
         for _ in range(num_activities):
+            # Weight knowledge point selection by proficiency
+            weighted_kps = [(kp, student_proficiency[student_id].get(kp.id, 0.5)) for kp in knowledge_points]
+            total_weight = sum(weight for _, weight in weighted_kps)
+            
+            if total_weight == 0:
+                # Fallback if there are issues with weights
+                knowledge_point = random.choice(knowledge_points) if knowledge_points else None
+            else:
+                # Select knowledge point based on weighted probability
+                r = random.uniform(0, total_weight)
+                cumulative_weight = 0
+                selected_kp = None
+                
+                for kp, weight in weighted_kps:
+                    cumulative_weight += weight
+                    if r <= cumulative_weight:
+                        selected_kp = kp
+                        break
+                
+                knowledge_point = selected_kp or random.choice(knowledge_points)
+            
             # Randomly select an activity type
             activity_type_data = random.choice(activity_types)
             activity_type = activity_type_data["type"]
             
-            # Randomly select a knowledge point (or None for general course activities)
-            knowledge_point = random.choice(knowledge_points) if random.random() < 0.8 else None
-            
             # Determine when this activity occurred (within last 90 days)
-            days_ago = random.randint(0, 90)
+            # More proficient students tend to start earlier
+            max_days_ago = 90 - int(30 * (1 - student_proficiency[student_id]['base']))
+            days_ago = random.randint(0, max_days_ago)
             hours_ago = random.randint(0, 23)
             minutes_ago = random.randint(0, 59)
             
@@ -161,7 +263,10 @@ def create_learning_activities():
             
             # Determine duration based on activity type and engagement
             min_duration, max_duration = activity_type_data["duration_range"]
-            duration = random.randint(min_duration, max_duration)
+            # More proficient students spend more time on activities
+            proficiency_factor = student_proficiency[student_id].get(knowledge_point.id if knowledge_point else 'base', 0.5)
+            duration_pct = 0.5 + (0.5 * proficiency_factor) 
+            duration = int(min_duration + ((max_duration - min_duration) * duration_pct))
             
             # Create activity-specific metadata
             metadata = activity_type_data["metadata_template"].copy()
@@ -171,35 +276,54 @@ def create_learning_activities():
                 if isinstance(value, str) and "{random_id}" in value:
                     metadata[key] = value.format(random_id=random.randint(1000, 9999))
             
-            # Fill in activity-specific dynamic metadata
+            # Fill in activity-specific dynamic metadata - adjusted for proficiency
+            kp_proficiency = student_proficiency[student_id].get(knowledge_point.id if knowledge_point else 'base', 0.5)
+            
             if activity_type == "video_watch":
-                metadata["completion_percentage"] = random.randint(30, 100)
-                metadata["playback_speed"] = random.choice([0.75, 1.0, 1.25, 1.5, 2.0])
-                metadata["watched_segments"] = [[0, random.randint(30, duration)]]
+                # More proficient students watch more of the video
+                completion_pct = int(30 + (70 * kp_proficiency))
+                metadata["completion_percentage"] = completion_pct
+                # More proficient students often watch at higher speeds
+                speed_options = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
+                speed_index = min(len(speed_options) - 1, int(kp_proficiency * len(speed_options)))
+                metadata["playback_speed"] = speed_options[random.randint(0, speed_index)]
+                metadata["watched_segments"] = [[0, int(duration * completion_pct / 100)]]
                 
             elif activity_type == "reading":
                 total_pages = random.randint(10, 50)
-                pages_read = random.randint(5, total_pages)
+                # More proficient students read more pages
+                pages_pct = 0.3 + (0.7 * kp_proficiency)
+                pages_read = int(total_pages * pages_pct)
                 metadata["pages_read"] = pages_read
                 metadata["total_pages"] = total_pages
                 metadata["completion_percentage"] = int(100 * pages_read / total_pages)
                 
             elif activity_type == "practice_exercise":
                 total_questions = random.randint(5, 20)
-                correct_questions = random.randint(0, total_questions)
+                # More proficient students get more questions correct
+                correct_pct = 0.2 + (0.8 * kp_proficiency)
+                correct_questions = int(total_questions * correct_pct)
                 metadata["questions_attempted"] = total_questions
                 metadata["questions_correct"] = correct_questions
-                metadata["difficulty_level"] = random.choice(["beginner", "intermediate", "advanced"])
+                # More proficient students tend to attempt more advanced exercises
+                difficulty_options = ["beginner", "intermediate", "advanced"]
+                difficulty_index = min(len(difficulty_options) - 1, int(kp_proficiency * len(difficulty_options)))
+                metadata["difficulty_level"] = difficulty_options[difficulty_index]
                 
             elif activity_type == "discussion_participation":
-                metadata["posts_created"] = random.randint(0, 5)
-                metadata["posts_read"] = random.randint(3, 20)
-                metadata["characters_typed"] = random.randint(100, 2000)
+                # More proficient students post more and read more
+                metadata["posts_created"] = int(5 * kp_proficiency)
+                metadata["posts_read"] = int(3 + (17 * kp_proficiency))
+                metadata["characters_typed"] = int(100 + (1900 * kp_proficiency))
                 
             elif activity_type == "quiz_attempt":
                 questions_count = random.randint(5, 15)
-                metadata["score_percentage"] = random.randint(50, 100)
-                metadata["time_per_question"] = round(duration / questions_count, 1)
+                # More proficient students score higher
+                score_pct = int(40 + (60 * kp_proficiency))
+                metadata["score_percentage"] = score_pct
+                # More proficient students take less time per question
+                time_factor = 1.0 - (0.5 * kp_proficiency)  # Reduces time as proficiency increases
+                metadata["time_per_question"] = round(duration / questions_count * time_factor, 1)
                 metadata["questions_count"] = questions_count
             
             try:
@@ -225,7 +349,9 @@ def create_learning_activities():
                 print(f"Error creating learning activity for {enrollment.student.name}: {e}")
     
     print(f"Created {len(activities)} learning activities.")
-    return activities
+    
+    # Return the student proficiency dictionary as well
+    return activities, student_proficiency
 
 def create_knowledge_point_mastery():
     """Create knowledge point mastery data for students based on activities and performance."""
@@ -238,7 +364,12 @@ def create_knowledge_point_mastery():
     masteries = []
     print("\nCreating student knowledge point mastery data...")
     
+    # Get or create activities and student proficiency data
+    _, student_proficiency = create_learning_activities()
+    
     for enrollment in enrollments:
+        student_id = enrollment.student.id
+        
         # Get knowledge points for this course
         knowledge_points = list(KnowledgePoint.select().where(KnowledgePoint.course == enrollment.course))
         
@@ -258,23 +389,45 @@ def create_knowledge_point_mastery():
                 enrollment.student, enrollment.course, knowledge_point
             )
             
-            # Calculate mastery level based on activities and assignment performance
-            if activity_count == 0 and assignment_performance is None:
-                # No activities or assignments for this knowledge point
-                mastery_level = 0.0
-            elif assignment_performance is None:
-                # Only activities, no assignments
-                mastery_level = min(0.5, activity_count / 20)  # Max 0.5 mastery just from activities
-            elif activity_count == 0:
-                # Only assignments, no activities
-                mastery_level = assignment_performance * 0.8  # Max 0.8 mastery just from assignments
-            else:
-                # Both activities and assignments
-                activity_factor = min(1.0, activity_count / 15)  # Activities contribute up to 40%
-                mastery_level = (activity_factor * 0.4) + (assignment_performance * 0.6)
+            # Get performance on questions specifically
+            question_performance = get_question_performance(
+                enrollment.student, knowledge_point
+            )
             
-            # Add some randomness to mastery level
-            mastery_level = max(0.0, min(1.0, mastery_level * random.uniform(0.85, 1.15)))
+            # Get proficiency level for this student and knowledge point
+            base_proficiency = student_proficiency.get(student_id, {}).get(knowledge_point.id, 0.5)
+            
+            # Calculate mastery level based on activities, assignments, and question performance
+            if activity_count == 0 and assignment_performance is None and question_performance is None:
+                # No data at all, use base proficiency with some random variation
+                mastery_level = base_proficiency * random.uniform(0.8, 1.2)
+            else:
+                # Combine all available data to determine mastery
+                components = []
+                weights = []
+                
+                if activity_count > 0:
+                    activity_factor = min(1.0, activity_count / 15)
+                    components.append(activity_factor * 0.3 + base_proficiency * 0.1)
+                    weights.append(0.4)  # Activities contribute 40% when available
+                
+                if assignment_performance is not None:
+                    components.append(assignment_performance)
+                    weights.append(0.3)  # Assignment performance contributes 30% when available
+                
+                if question_performance is not None:
+                    components.append(question_performance)
+                    weights.append(0.3)  # Question performance contributes 30% when available
+                
+                if not components:
+                    mastery_level = base_proficiency
+                else:
+                    total_weight = sum(weights)
+                    weighted_sum = sum(c * w for c, w in zip(components, weights))
+                    mastery_level = weighted_sum / total_weight if total_weight > 0 else base_proficiency
+            
+            # Clamp mastery level to valid range
+            mastery_level = max(0.0, min(1.0, mastery_level))
             
             # Get the most recent interaction with this knowledge point
             last_activity = LearningActivity.select().where(
@@ -316,7 +469,7 @@ def main():
     #setup_database()
     
     # Step 1: Create learning activities
-    activities = create_learning_activities()
+    activities, _ = create_learning_activities()
     
     # Step 2: Create knowledge point mastery data
     masteries = create_knowledge_point_mastery()

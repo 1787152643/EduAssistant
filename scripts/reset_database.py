@@ -11,6 +11,9 @@ from app.models.chat import *
 
 from scripts.create_tables import tables
 
+# Make sure we explicitly mention the new models to ensure proper imports
+from app.models.assignment import Assignment, StudentAssignment, Question, QuestionOption, StudentResponse, QuestionType
+
 db.drop_tables(tables)
 db.create_tables(tables)
 

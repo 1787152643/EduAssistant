@@ -17,6 +17,92 @@
 
 <div class="row">
     <div class="col-md-8">
+        {% if questions %}
+        <!-- 问题列表 -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i>问题回答</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('course.grade_assignment', assignment_id=assignment.id, student_id=student.id) }}">
+                    {% for question in questions %}
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                {% if question.question_type == 'multiple_choice' %}
+                                <span class="badge bg-success me-2">选择题</span>
+                                {% elif question.question_type == 'fill_in_blank' %}
+                                <span class="badge bg-primary me-2">填空题</span>
+                                {% elif question.question_type == 'short_answer' %}
+                                <span class="badge bg-info me-2">简答题</span>
+                                {% endif %}
+                                <strong>{{ loop.index }}. </strong>
+                            </div>
+                            <span class="badge bg-secondary">{{ question.points }} 分</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <p>{{ question.question_text }}</p>
+                            </div>
+                            
+                            <!-- 显示学生的回答 -->
+                            {% if question.id in student_responses %}
+                                {% if question.question_type == 'multiple_choice' %}
+                                    {% for option in question.options %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" disabled
+                                            {% if student_responses[question.id].selected_option_id == option.id %}checked{% endif %}
+                                        >
+                                        <label class="form-check-label {% if option.is_correct %}text-success fw-bold{% endif %}">
+                                            {{ option.option_text }}
+                                            {% if option.is_correct %}<i class="fas fa-check-circle text-success ms-1"></i>{% endif %}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                <div class="p-3 bg-light rounded mb-3">
+                                    {{ student_responses[question.id].answer_text }}
+                                </div>
+                                {% endif %}
+                                
+                                <!-- 评分区域 -->
+                                <div class="mt-4 border-top pt-3">
+                                    <h6>评分</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label for="question_{{ question.id }}_score" class="form-label">分数</label>
+                                            <div class="input-group">
+                                                <input type="number" id="question_{{ question.id }}_score" name="question_{{ question.id }}_score" 
+                                                    class="form-control" min="0" max="{{ question.points }}" step="0.5" 
+                                                    value="{{ student_responses[question.id].score if student_responses[question.id].score is not none }}">
+                                                <span class="input-group-text">/ {{ question.points }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <label for="question_{{ question.id }}_feedback" class="form-label">反馈</label>
+                                            <textarea id="question_{{ question.id }}_feedback" name="question_{{ question.id }}_feedback" class="form-control" rows="2">{{ student_responses[question.id].feedback }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>学生未回答此问题
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">保存评分</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 原有的纯文本作业内容 -->
+        {% if submission.answer %}
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-light">
                 <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>学生作业内容</h5>
@@ -44,12 +130,13 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
     
     <div class="col-md-4">
         <div class="card shadow-sm">
             <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>评分</h5>
+                <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>整体评分</h5>
             </div>
             <div class="card-body">
                 {% if submission.completed %}
@@ -92,6 +179,29 @@
                     </div>
                 </form>
                 {% endif %}
+            </div>
+        </div>
+        
+        <!-- 提交信息卡片 -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>提交信息</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>提交时间</span>
+                        <span>{{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>尝试次数</span>
+                        <span>{{ submission.attempts }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>问题回答数</span>
+                        <span>{{ student_responses|length }} / {{ questions|length }}</span>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>

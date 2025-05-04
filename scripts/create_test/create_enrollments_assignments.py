@@ -166,6 +166,10 @@ def create_assignments():
                             }
                         )
                         print(f"  Linked knowledge point: {kp.name}")
+                    
+                    # Create questions for this assignment
+                    create_questions_for_assignment(assignment, selected_kps)
+                    
                 else:
                     print(f"Assignment {assignment.title} already exists.")
                     assignments.append(assignment)
@@ -175,6 +179,139 @@ def create_assignments():
     
     print(f"Created {len(assignments)} assignments.")
     return assignments
+
+def create_questions_for_assignment(assignment, knowledge_points):
+    """Create different types of questions for an assignment."""
+    # Determine number of questions based on assignment points
+    total_points = assignment.total_points
+    num_questions = random.randint(max(3, int(total_points / 25)), max(5, int(total_points / 15)))
+    
+    # Determine distribution of question types
+    # For exams and quizzes, more multiple choice
+    is_exam_or_quiz = "Exam" in assignment.title or "Quiz" in assignment.title
+    
+    if is_exam_or_quiz:
+        multiple_choice_pct = 0.6
+        fill_in_blank_pct = 0.3
+        short_answer_pct = 0.1
+    else:
+        multiple_choice_pct = 0.3
+        fill_in_blank_pct = 0.3
+        short_answer_pct = 0.4
+    
+    # Calculate approximate counts for each type
+    mc_count = int(num_questions * multiple_choice_pct)
+    fib_count = int(num_questions * fill_in_blank_pct)
+    sa_count = num_questions - mc_count - fib_count
+    
+    # Allocate points per question type
+    points_per_mc = round(total_points * multiple_choice_pct / max(1, mc_count), 1)
+    points_per_fib = round(total_points * fill_in_blank_pct / max(1, fib_count), 1)
+    points_per_sa = round(total_points * short_answer_pct / max(1, sa_count), 1)
+    
+    # Add multiple choice questions
+    for i in range(mc_count):
+        # Get a relevant knowledge point for this question
+        kp = random.choice(knowledge_points)
+        
+        # Create the question
+        question_text = generate_question_text(kp.name, QuestionType.MULTIPLE_CHOICE)
+        question = Question.create(
+            assignment=assignment,
+            question_text=question_text,
+            question_type=QuestionType.MULTIPLE_CHOICE,
+            points=points_per_mc,
+            order=i+1
+        )
+        
+        # Create 4 options with one correct answer
+        options = generate_multiple_choice_options(kp.name)
+        for j, option in enumerate(options):
+            QuestionOption.create(
+                question=question,
+                option_text=option['text'],
+                is_correct=option['is_correct'],
+                order=j+1
+            )
+        
+        print(f"  Created multiple choice question {i+1} for {assignment.title}")
+    
+    # Add fill-in-blank questions
+    for i in range(fib_count):
+        kp = random.choice(knowledge_points)
+        question_text = generate_question_text(kp.name, QuestionType.FILL_IN_BLANK)
+        question = Question.create(
+            assignment=assignment,
+            question_text=question_text,
+            question_type=QuestionType.FILL_IN_BLANK,
+            points=points_per_fib,
+            order=mc_count+i+1
+        )
+        print(f"  Created fill-in-blank question {i+1} for {assignment.title}")
+    
+    # Add short answer questions
+    for i in range(sa_count):
+        kp = random.choice(knowledge_points)
+        question_text = generate_question_text(kp.name, QuestionType.SHORT_ANSWER)
+        question = Question.create(
+            assignment=assignment,
+            question_text=question_text,
+            question_type=QuestionType.SHORT_ANSWER,
+            points=points_per_sa,
+            order=mc_count+fib_count+i+1
+        )
+        print(f"  Created short answer question {i+1} for {assignment.title}")
+
+def generate_question_text(topic, question_type):
+    """Generate question text based on topic and type."""
+    # Multiple choice question templates
+    mc_templates = [
+        f"Which of the following best describes {topic}?",
+        f"What is the primary purpose of {topic}?",
+        f"Which concept is most closely related to {topic}?",
+        f"In the context of {topic}, which statement is correct?",
+        f"What is the key characteristic of {topic}?"
+    ]
+    
+    # Fill-in-blank question templates
+    fib_templates = [
+        f"The main function of {topic} is ______.",
+        f"{topic} is primarily used to ______.",
+        f"When implementing {topic}, the most important consideration is ______.",
+        f"The relationship between {topic} and related concepts is best described as ______.",
+        f"The core principle behind {topic} states that ______."
+    ]
+    
+    # Short answer question templates
+    sa_templates = [
+        f"Explain the concept of {topic} and provide a real-world example.",
+        f"Compare and contrast {topic} with a related concept of your choice.",
+        f"Describe how {topic} is applied in practical scenarios.",
+        f"What are the advantages and limitations of {topic}?",
+        f"Analyze the impact of {topic} on system design and implementation."
+    ]
+    
+    if question_type == QuestionType.MULTIPLE_CHOICE:
+        return random.choice(mc_templates)
+    elif question_type == QuestionType.FILL_IN_BLANK:
+        return random.choice(fib_templates)
+    else:  # Short answer
+        return random.choice(sa_templates)
+
+def generate_multiple_choice_options(topic):
+    """Generate plausible options for a multiple choice question about a topic."""
+    # One correct answer, three distractors
+    options = [
+        {"text": f"The correct explanation of {topic}.", "is_correct": True},
+        {"text": f"A common misconception about {topic}.", "is_correct": False},
+        {"text": f"A concept related to but distinct from {topic}.", "is_correct": False},
+        {"text": f"An unrelated concept often confused with {topic}.", "is_correct": False}
+    ]
+    
+    # Shuffle the options
+    random.shuffle(options)
+    
+    return options
 
 def create_student_submissions():
     """Create student assignment submissions with realistic completion patterns."""
@@ -199,6 +336,9 @@ def create_student_submissions():
         # Get assignments for this course
         course_assignments = [a for a in assignments if a.course_id == enrollment.course_id]
         
+        # Set student proficiency level (varies by student)
+        student_proficiency = random.uniform(0.3, 0.9)
+        
         for assignment in course_assignments:
             # Only create submissions for past due assignments (~80% chance)
             if assignment.due_date < CURRENT_DATE and random.random() < 0.8:
@@ -219,43 +359,12 @@ def create_student_submissions():
                         hours=hours_before, minutes=minutes_before
                     )
                 
-                # Determine score (affected by lateness)
-                max_score = assignment.total_points
-                if is_late:
-                    base_score_pct = random.uniform(0.5, 0.85)  # Late submissions score lower
-                else:
-                    base_score_pct = random.uniform(0.65, 0.98)  # On-time submissions score higher
-                
-                # Add some randomness to simulate student performance variations
-                score = round(max_score * base_score_pct * random.uniform(0.9, 1.1), 1)
-                score = min(max_score, max(0, score))  # Clamp between 0 and max
-                
-                # Generate an appropriate answer text
-                answer_length = random.randint(500, 2000)
-                answer = f"Student submission for {assignment.title}. This is a simulated answer "
-                answer += f"of approximately {answer_length} characters in length. "
-                answer += "It includes references to relevant course materials and knowledge points."
-                
-                # Generate feedback based on score
-                if score >= 0.9 * max_score:
-                    feedback = "Excellent work! You've demonstrated a thorough understanding of the concepts."
-                elif score >= 0.8 * max_score:
-                    feedback = "Good job. Your submission covers most key points with minor issues."
-                elif score >= 0.7 * max_score:
-                    feedback = "Satisfactory work with some gaps in understanding. Review sections on [topic]."
-                elif score >= 0.6 * max_score:
-                    feedback = "Passing, but shows significant misunderstandings. Please see me during office hours."
-                else:
-                    feedback = "This submission does not meet the requirements. Consider reworking and resubmitting."
-                
+                # Create student assignment record
                 try:
-                    submission, created = StudentAssignment.get_or_create(
+                    student_assignment, created = StudentAssignment.get_or_create(
                         student=enrollment.student,
                         assignment=assignment,
                         defaults={
-                            'answer': answer,
-                            'feedback': feedback if random.random() < 0.9 else None,  # 90% have feedback
-                            'score': score if random.random() < 0.95 else None,  # 95% have been graded
                             'submitted_at': submission_time,
                             'attempts': random.randint(1, 3),
                             'completed': True,
@@ -266,16 +375,130 @@ def create_student_submissions():
                     
                     if created:
                         print(f"Created submission for {enrollment.student.name} on {assignment.title}")
-                        submissions.append(submission)
+                        submissions.append(student_assignment)
+                        
+                        # Create student responses for questions
+                        create_student_responses(student_assignment, student_proficiency)
+                        
                     else:
                         print(f"Submission for {enrollment.student.name} on {assignment.title} already exists")
-                        submissions.append(submission)
+                        submissions.append(student_assignment)
                         
                 except Exception as e:
                     print(f"Error creating submission for {enrollment.student.name} on {assignment.title}: {e}")
     
     print(f"Created {len(submissions)} student submissions.")
     return submissions
+
+def create_student_responses(student_assignment, student_proficiency):
+    """Create responses to individual questions in an assignment."""
+    
+    # Get all questions for this assignment
+    questions = Question.select().where(Question.assignment == student_assignment.assignment)
+    
+    total_score = 0
+    
+    for question in questions:
+        # Adjust proficiency by random factor for each question (some questions are harder)
+        question_difficulty = random.uniform(0.7, 1.3)
+        effective_proficiency = min(1.0, student_proficiency / question_difficulty)
+        
+        # Determine if student gets this question correct
+        gets_correct = random.random() < effective_proficiency
+        
+        if question.question_type == QuestionType.MULTIPLE_CHOICE:
+            # Get options for this question
+            options = list(QuestionOption.select().where(QuestionOption.question == question))
+            
+            if gets_correct:
+                # Select the correct option
+                selected_option = next(opt for opt in options if opt.is_correct)
+            else:
+                # Select a random incorrect option
+                incorrect_options = [opt for opt in options if not opt.is_correct]
+                selected_option = random.choice(incorrect_options if incorrect_options else options)
+            
+            response = StudentResponse.create(
+                student_assignment=student_assignment,
+                question=question,
+                selected_option=selected_option,
+                score=question.points if gets_correct else round(random.uniform(0, 0.3) * question.points, 1),
+                feedback="Correct answer!" if gets_correct else "Review the concept of " + question.question_text.split()[2]
+            )
+        
+        elif question.question_type == QuestionType.FILL_IN_BLANK:
+            # Generate a plausible answer
+            if gets_correct:
+                answer_text = "Correct answer for fill-in-blank question"
+                score = question.points
+                feedback = "Perfect answer!"
+            else:
+                answer_text = "Partially correct or incorrect answer"
+                score = round(random.uniform(0.2, 0.7) * question.points, 1)
+                feedback = "Your answer is partially correct. Consider reviewing the concept."
+            
+            response = StudentResponse.create(
+                student_assignment=student_assignment,
+                question=question,
+                answer_text=answer_text,
+                score=score,
+                feedback=feedback
+            )
+        
+        else:  # Short answer
+            # Generate a more detailed answer text
+            answer_quality = random.uniform(0.1, 1.0) * effective_proficiency
+            answer_length = int(100 + answer_quality * 500)  # Length between 100-600 chars based on quality
+            
+            answer_text = f"This is a simulated student answer for the short answer question about {question.question_text.split('concept of ')[1].split(' and')[0] if 'concept of' in question.question_text else 'the topic'}. "
+            answer_text += "It includes " + ("relevant" if answer_quality > 0.6 else "some") + " information and examples. "
+            answer_text += "The answer " + ("thoroughly" if answer_quality > 0.8 else "adequately" if answer_quality > 0.5 else "barely") + " addresses the question prompt."
+            
+            # Pad the answer to reach the desired length
+            answer_text += " " * max(0, answer_length - len(answer_text))
+            
+            # Score based on answer quality
+            score = round(answer_quality * question.points, 1)
+            
+            # Generate appropriate feedback
+            if score > 0.8 * question.points:
+                feedback = "Excellent answer with good detail and examples!"
+            elif score > 0.5 * question.points:
+                feedback = "Good answer, but could include more specific examples."
+            else:
+                feedback = "Your answer needs improvement. Review the course materials on this topic."
+            
+            response = StudentResponse.create(
+                student_assignment=student_assignment,
+                question=question,
+                answer_text=answer_text,
+                score=score,
+                feedback=feedback
+            )
+        
+        total_score += response.score
+    
+    # Update the student assignment total score
+    student_assignment.score = total_score
+    student_assignment.feedback = generate_overall_feedback(total_score, student_assignment.assignment.total_points)
+    student_assignment.save()
+    
+    print(f"  Created {questions.count()} question responses for assignment")
+
+def generate_overall_feedback(score, total_points):
+    """Generate overall feedback based on assignment score."""
+    percentage = score / total_points if total_points > 0 else 0
+    
+    if percentage >= 0.9:
+        return "Outstanding work! You've demonstrated excellent understanding of all concepts."
+    elif percentage >= 0.8:
+        return "Great job! You have a strong grasp of most of the material."
+    elif percentage >= 0.7:
+        return "Good work. You understand the core concepts but have some areas to improve."
+    elif percentage >= 0.6:
+        return "Satisfactory. You've passed, but should review the material more thoroughly."
+    else:
+        return "You need to improve your understanding of the key concepts. Please review the course materials and consider seeking additional help."
 
 def main():
     #setup_database()

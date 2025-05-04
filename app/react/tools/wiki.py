@@ -46,7 +46,8 @@ def wikipedia(query: str) -> Optional[str]:
 
 
 if __name__ == '__main__':
-    queries = ["Geoffrey Hinton", "Demis Hassabis"]
+    #queries = ["Geoffrey Hinton", "Demis Hassabis"]
+    queries = ['Linear Algebra']
 
     for query in queries:
         result = wikipedia(query)

@@ -50,7 +50,23 @@ def clean_datetime_fields(data: Union[Dict, List, Any]) -> Union[Dict, List, Any
         return data
 
 def model_to_dict_cleaned(model):
-    return clean_datetime_fields(model_to_dict(model, exclude=[User.password_hash]))
+    return clean_datetime_fields(model_to_dict(model, exclude=[User.password_hash], max_depth=1))
+
+def result_model_to_dict(results):
+    if isinstance(results, BaseModel):
+        return model_to_dict_cleaned(results)
+    elif isinstance(results, list):
+        if len(results) > 0 and isinstance(results[0], BaseModel):  
+            return [result_model_to_dict(result) for result in results]
+        else:
+            return results
+    elif isinstance(results, dict):
+        if len(results) > 0 and isinstance(next(iter(results.values())), BaseModel):
+            return {k: result_model_to_dict(v) for k, v in results.items()}
+        else:
+            return results
+    else:
+        return results
 
 def create_tool_executor(func: Callable) -> Callable:
     """Create a function that executes a service method with JSON/Dict parameters.
@@ -69,13 +85,16 @@ def create_tool_executor(func: Callable) -> Callable:
         try:
             results = func(**params)
             # 如果返回的是BaseModel，则转换为字典
-            if isinstance(results, BaseModel):
+            '''if isinstance(results, BaseModel):
                 return model_to_dict_cleaned(results)
             # 如果返回的是列表，则转换为字典列表
             elif isinstance(results, list):
                 return [model_to_dict_cleaned(result) for result in results]
+            elif isinstance(results, dict):
+                return {k: model_to_dict_cleaned(v) for k, v in results.items()}
             # 如果返回的是其他类型，则直接返回
-            return results
+            return results'''
+            return result_model_to_dict(results)
         except Exception as e:
             logger.exception(f"Error executing {func.__name__}")
             raise ToolExecutionError(f"Error executing {func.__name__}: {str(e)}", original_error=e)

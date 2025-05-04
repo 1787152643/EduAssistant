@@ -1,4 +1,4 @@
-from app.react.tools.googleSearch import google_search
+#from app.react.tools.googleSearch import google_search
 from app.react.tools_register import register_as_tool
 from app.react.agent import run
 # 获取推荐的基本提示词
@@ -59,7 +59,7 @@ class RecommendService:
         answer = run(basic_prompt + prompt, 'student')
         return answer
 
-    @register_as_tool(roles=['student', 'teacher'])
+    #@register_as_tool(roles=['student', 'teacher'])
     @staticmethod
     def google_search(query: str):
         """Google搜索工具，使用Google搜索引擎联网搜索，返回搜索结果

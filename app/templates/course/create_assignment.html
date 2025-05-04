@@ -4,14 +4,14 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-md-10">
         <div class="card shadow">
             <div class="card-header bg-primary text-white">
                 <h4 class="mb-0">创建作业</h4>
                 <p class="mb-0 text-white-50">课程: {{ course.name }} ({{ course.code }})</p>
             </div>
             <div class="card-body">
-                <form method="post">
+                <form method="post" id="createAssignmentForm">
                     <div class="mb-3">
                         <label for="title" class="form-label">作业标题</label>
                         <input type="text" class="form-control" id="title" name="title" required>
@@ -19,7 +19,7 @@
                     
                     <div class="mb-3">
                         <label for="description" class="form-label">作业描述</label>
-                        <textarea class="form-control" id="description" name="description" rows="6" required></textarea>
+                        <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
                     </div>
                     
                     <div class="row">
@@ -34,11 +34,156 @@
                         </div>
                     </div>
                     
+                    <!-- 问题部分 -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">问题列表</h5>
+                            <button type="button" class="btn btn-sm btn-success" id="addQuestionBtn">
+                                <i class="fas fa-plus"></i> 添加问题
+                            </button>
+                        </div>
+                        <div class="card-body" id="questionsContainer">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>点击"添加问题"按钮添加不同类型的问题
+                            </div>
+                            <!-- 问题将在这里动态添加 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 隐藏字段，存储问题数据的JSON -->
+                    <input type="hidden" name="questions_data" id="questionsData">
+                    
                     <div class="d-flex justify-content-between">
                         <a href="{{ url_for('course.view', course_id=course.id) }}" class="btn btn-secondary">取消</a>
-                        <button type="submit" class="btn btn-primary">创建作业</button>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">创建作业</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 问题模板 (隐藏) -->
+<div class="d-none">
+    <!-- 选择题模板 -->
+    <div id="multipleChoiceTemplate" class="question-template card mb-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 question-title">选择题</h6>
+            <div>
+                <button type="button" class="btn btn-sm btn-danger remove-question-btn">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">问题内容</label>
+                <textarea class="form-control question-text" rows="2" placeholder="输入问题内容..." required></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">分值</label>
+                <input type="number" class="form-control question-points" value="10" min="0" step="0.5">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">选项</label>
+                <div class="options-container">
+                    <!-- 选项将在这里动态添加 -->
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-2 add-option-btn">
+                    <i class="fas fa-plus"></i> 添加选项
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 填空题模板 -->
+    <div id="fillInBlankTemplate" class="question-template card mb-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 question-title">填空题</h6>
+            <div>
+                <button type="button" class="btn btn-sm btn-danger remove-question-btn">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">问题内容</label>
+                <textarea class="form-control question-text" rows="2" placeholder="输入问题内容..." required></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">分值</label>
+                <input type="number" class="form-control question-points" value="10" min="0" step="0.5">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 简答题模板 -->
+    <div id="shortAnswerTemplate" class="question-template card mb-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 question-title">简答题</h6>
+            <div>
+                <button type="button" class="btn btn-sm btn-danger remove-question-btn">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">问题内容</label>
+                <textarea class="form-control question-text" rows="2" placeholder="输入问题内容..." required></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">分值</label>
+                <input type="number" class="form-control question-points" value="10" min="0" step="0.5">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 选项模板 -->
+    <div id="optionTemplate" class="option-item input-group mb-2">
+        <div class="input-group-text">
+            <input type="radio" class="option-correct" name="correct_option" aria-label="选择正确答案">
+        </div>
+        <input type="text" class="form-control option-text" placeholder="输入选项内容...">
+        <button type="button" class="btn btn-outline-danger remove-option-btn">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+</div>
+
+<!-- 问题类型选择模态框 -->
+<div class="modal fade" id="questionTypeModal" tabindex="-1" aria-labelledby="questionTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="questionTypeModalLabel">选择问题类型</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="list-group">
+                    <button type="button" class="list-group-item list-group-item-action" data-question-type="multiple_choice">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">选择题</h5>
+                            <small><i class="fas fa-check-circle text-success"></i></small>
+                        </div>
+                        <p class="mb-1">多个选项中选择一个正确答案</p>
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" data-question-type="fill_in_blank">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">填空题</h5>
+                            <small><i class="fas fa-edit text-primary"></i></small>
+                        </div>
+                        <p class="mb-1">填写简短答案的问题</p>
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" data-question-type="short_answer">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">简答题</h5>
+                            <small><i class="fas fa-paragraph text-info"></i></small>
+                        </div>
+                        <p class="mb-1">需要学生详细作答的问题</p>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -60,6 +205,157 @@
         
         const defaultDueDate = `${year}-${month}-${day}T${hours}:${minutes}`;
         document.getElementById('due_date').value = defaultDueDate;
+        
+        // 初始化问题类型模态框
+        const questionTypeModal = new bootstrap.Modal(document.getElementById('questionTypeModal'));
+        
+        // 添加问题按钮点击事件
+        document.getElementById('addQuestionBtn').addEventListener('click', function() {
+            questionTypeModal.show();
+        });
+        
+        // 问题类型选择事件
+        document.querySelectorAll('[data-question-type]').forEach(button => {
+            button.addEventListener('click', function() {
+                const questionType = this.dataset.questionType;
+                addQuestion(questionType);
+                questionTypeModal.hide();
+            });
+        });
+        
+        // 表单提交事件
+        document.getElementById('createAssignmentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 收集问题数据
+            const questionsData = collectQuestionsData();
+            
+            // 更新隐藏字段
+            document.getElementById('questionsData').value = JSON.stringify(questionsData);
+            
+            // 提交表单
+            this.submit();
+        });
+        
+        // 为动态添加的元素设置事件委托
+        document.getElementById('questionsContainer').addEventListener('click', function(e) {
+            // 删除问题按钮
+            if (e.target.closest('.remove-question-btn')) {
+                const questionCard = e.target.closest('.question-template');
+                questionCard.remove();
+            }
+            
+            // 添加选项按钮
+            if (e.target.closest('.add-option-btn')) {
+                const questionCard = e.target.closest('.question-template');
+                const optionsContainer = questionCard.querySelector('.options-container');
+                addOption(optionsContainer, questionCard.dataset.questionIndex);
+            }
+            
+            // 删除选项按钮
+            if (e.target.closest('.remove-option-btn')) {
+                const optionItem = e.target.closest('.option-item');
+                optionItem.remove();
+            }
+        });
     });
+    
+    // 添加问题的函数
+    function addQuestion(questionType) {
+        const questionsContainer = document.getElementById('questionsContainer');
+        
+        // 如果是第一个问题，清除提示信息
+        if (questionsContainer.querySelector('.alert')) {
+            questionsContainer.innerHTML = '';
+        }
+        
+        let template;
+        switch (questionType) {
+            case 'multiple_choice':
+                template = document.getElementById('multipleChoiceTemplate').cloneNode(true);
+                break;
+            case 'fill_in_blank':
+                template = document.getElementById('fillInBlankTemplate').cloneNode(true);
+                break;
+            case 'short_answer':
+                template = document.getElementById('shortAnswerTemplate').cloneNode(true);
+                break;
+        }
+        
+        // 从模板中移除d-none类
+        template.classList.remove('d-none');
+        
+        // 设置问题索引
+        const questionIndex = document.querySelectorAll('.question-template:not(.d-none)').length;
+        template.dataset.questionIndex = questionIndex;
+        template.dataset.questionType = questionType;
+        
+        // 添加到容器
+        questionsContainer.appendChild(template);
+        
+        // 如果是选择题，添加默认两个选项
+        if (questionType === 'multiple_choice') {
+            const optionsContainer = template.querySelector('.options-container');
+            addOption(optionsContainer, questionIndex);
+            addOption(optionsContainer, questionIndex);
+        }
+    }
+    
+    // 添加选项的函数
+    function addOption(container, questionIndex) {
+        const optionTemplate = document.getElementById('optionTemplate').cloneNode(true);
+        optionTemplate.classList.remove('d-none');
+        
+        // 设置选项索引
+        const optionIndex = container.querySelectorAll('.option-item').length;
+        optionTemplate.dataset.optionIndex = optionIndex;
+        
+        // 设置单选按钮名称，使同一问题的选项互斥
+        const radioBtn = optionTemplate.querySelector('.option-correct');
+        radioBtn.name = `correct_option_${questionIndex}`;
+        
+        container.appendChild(optionTemplate);
+    }
+    
+    // 收集问题数据的函数
+    function collectQuestionsData() {
+        const questions = [];
+        
+        document.querySelectorAll('.question-template:not(.d-none)').forEach((questionCard, index) => {
+            const questionType = questionCard.dataset.questionType;
+            const questionText = questionCard.querySelector('.question-text').value;
+            const points = parseFloat(questionCard.querySelector('.question-points').value);
+            
+            const questionData = {
+                index: index,
+                type: questionType,
+                text: questionText,
+                points: points
+            };
+            
+            // 如果是选择题，收集选项数据
+            if (questionType === 'multiple_choice') {
+                const options = [];
+                const optionItems = questionCard.querySelectorAll('.option-item:not(.d-none)');
+                
+                optionItems.forEach((optionItem, optIndex) => {
+                    const optionText = optionItem.querySelector('.option-text').value;
+                    const isCorrect = optionItem.querySelector('.option-correct').checked;
+                    
+                    options.push({
+                        index: optIndex,
+                        text: optionText,
+                        is_correct: isCorrect
+                    });
+                });
+                
+                questionData.options = options;
+            }
+            
+            questions.push(questionData);
+        });
+        
+        return questions;
+    }
 </script>
 {% endblock %}

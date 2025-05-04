@@ -63,6 +63,9 @@
         border-radius: 5px;
         margin-bottom: 5px;
         cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     
     .chat-history-item:hover {
@@ -71,6 +74,25 @@
     
     .chat-history-item.active {
         background-color: #dbe7f0;
+    }
+    
+    .chat-title {
+        flex-grow: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .delete-chat-btn {
+        visibility: hidden;
+        color: #dc3545;
+        cursor: pointer;
+        margin-left: 5px;
+        font-size: 0.8rem;
+    }
+    
+    .chat-history-item:hover .delete-chat-btn {
+        visibility: visible;
     }
     
     .empty-chat-message {
@@ -106,6 +128,43 @@
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-5px); }
     }
+    
+    /* Markdown 样式 */
+    .markdown-content pre {
+        background-color: #f8f8f8;
+        border-radius: 3px;
+        padding: 8px;
+        overflow-x: auto;
+    }
+    
+    .markdown-content code {
+        background-color: #f0f0f0;
+        border-radius: 3px;
+        padding: 2px 4px;
+        font-family: monospace;
+    }
+    
+    .markdown-content blockquote {
+        border-left: 4px solid #ddd;
+        padding-left: 10px;
+        color: #666;
+        margin: 10px 0;
+    }
+    
+    .markdown-content table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 10px 0;
+    }
+    
+    .markdown-content table, .markdown-content th, .markdown-content td {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+    
+    .markdown-content th {
+        background-color: #f2f2f2;
+    }
 </style>
 {% endblock %}
 
@@ -124,7 +183,10 @@
         <div id="chat-history" class="chat-history">
             {% for chat in chats %}
             <div class="chat-history-item" data-chat-id="{{ chat.id }}">
-                <i class="fas fa-comment-dots me-2"></i>{{ chat.title }}
+                <div class="chat-title"><i class="fas fa-comment-dots me-2"></i>{{ chat.title }}</div>
+                <span class="delete-chat-btn" onclick="deleteChat(event, {{ chat.id }})">
+                    <i class="fas fa-times"></i>
+                </span>
             </div>
             {% endfor %}
         </div>
@@ -152,6 +214,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- 添加 Marked.js 用于 Markdown 解析 -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
     // 当前选中的聊天ID
     let currentChatId = null;
@@ -178,7 +242,12 @@
             const chatItem = document.createElement('div');
             chatItem.className = 'chat-history-item active';
             chatItem.dataset.chatId = data.id;
-            chatItem.innerHTML = `<i class="fas fa-comment-dots me-2"></i>${data.title}`;
+            chatItem.innerHTML = `
+                <div class="chat-title"><i class="fas fa-comment-dots me-2"></i>${data.title}</div>
+                <span class="delete-chat-btn" onclick="deleteChat(event, ${data.id})">
+                    <i class="fas fa-times"></i>
+                </span>
+            `;
             document.getElementById('chat-history').prepend(chatItem);
             
             // 更新当前聊天ID
@@ -200,7 +269,9 @@
             }
             
             // 为新添加的聊天项添加点击事件
-            chatItem.addEventListener('click', function() {
+            chatItem.addEventListener('click', function(e) {
+                // 确保点击删除按钮时不会触发选择聊天
+                if (e.target.closest('.delete-chat-btn')) return;
                 selectChat(data.id);
             });
             
@@ -216,6 +287,65 @@
         .catch(error => {
             console.error('Error creating new chat:', error);
             return null;
+        });
+    }
+    
+    // 删除聊天
+    function deleteChat(event, chatId) {
+        // 阻止事件冒泡，防止触发聊天选择
+        event.stopPropagation();
+        
+        if (!confirm('确定要删除这个聊天吗？此操作不可恢复。')) {
+            return;
+        }
+        
+        console.log("Deleting chat:", chatId);
+        
+        fetch(`/ai-assistant/chats/${chatId}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Chat deleted successfully:", data);
+            
+            // 从DOM中移除对应的聊天项
+            const chatItem = document.querySelector(`.chat-history-item[data-chat-id="${chatId}"]`);
+            if (chatItem) {
+                chatItem.remove();
+            }
+            
+            // 如果删除的是当前选中的聊天，则清空聊天区域并重置当前聊天ID
+            if (currentChatId === chatId) {
+                currentChatId = null;
+                
+                const chatMessages = document.getElementById('chat-messages');
+                if (chatMessages) {
+                    chatMessages.innerHTML = '';
+                    
+                    // 显示空消息提示
+                    const emptyMessage = document.createElement('div');
+                    emptyMessage.id = 'empty-chat-message';
+                    emptyMessage.className = 'empty-chat-message';
+                    emptyMessage.innerHTML = '<h4>AI教学助手</h4><p>我可以回答您关于教学、课程或学习的任何问题</p>';
+                    emptyMessage.style.display = 'block';
+                    chatMessages.appendChild(emptyMessage);
+                }
+                
+                // 如果还有其他聊天，选择第一个
+                const firstChat = document.querySelector('.chat-history-item');
+                if (firstChat) {
+                    selectChat(firstChat.dataset.chatId);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting chat:', error);
+            alert('删除聊天时出错：' + error.message);
         });
     }
     
@@ -360,9 +490,15 @@
         const messageDiv = document.createElement('div');
         messageDiv.className = `message message-${role}`;
         
-        // 将普通文本中的换行符转换为HTML换行
-        const formattedText = content.replace(/\n/g, '<br>');
-        messageDiv.innerHTML = formattedText;
+        if (role === 'assistant') {
+            // 对AI助手的消息使用Markdown解析
+            messageDiv.className += ' markdown-content';
+            messageDiv.innerHTML = marked.parse(content);
+        } else {
+            // 用户消息仍然使用简单的换行转换
+            const formattedText = content.replace(/\n/g, '<br>');
+            messageDiv.innerHTML = formattedText;
+        }
         
         // 添加空值检查，确保元素存在
         const emptyMessage = document.getElementById('empty-chat-message');
@@ -386,6 +522,14 @@
     
     // 初始化页面
     document.addEventListener('DOMContentLoaded', function() {
+        // 配置Marked选项
+        marked.setOptions({
+            breaks: true,        // 识别换行符为<br>
+            gfm: true,           // 使用GitHub风格的Markdown
+            headerIds: false,    // 不生成header IDs
+            sanitize: false      // 不移除HTML标签
+        });
+        
         // 新建聊天按钮
         document.getElementById('new-chat-btn').addEventListener('click', createNewChat);
         
@@ -443,7 +587,9 @@
         
         // 为所有聊天历史项添加点击事件
         document.querySelectorAll('.chat-history-item').forEach(item => {
-            item.addEventListener('click', function() {
+            item.addEventListener('click', function(e) {
+                // 确保点击删除按钮时不会触发选择聊天
+                if (e.target.closest('.delete-chat-btn')) return;
                 selectChat(this.dataset.chatId);
             });
         });

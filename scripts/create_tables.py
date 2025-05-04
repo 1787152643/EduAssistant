@@ -14,7 +14,7 @@ app = create_app()
 tables = [
             User, Role, UserRole,
             Course, StudentCourse,
-            Assignment, StudentAssignment,
+            Assignment, StudentAssignment, Question, QuestionOption, StudentResponse,
             LearningActivity, KnowledgePoint, StudentKnowledgePoint, AssignmentKnowledgePoint, KnowledgeBaseKnowledgePoint,
             KnowledgeBase,
             Chat, ChatMessage

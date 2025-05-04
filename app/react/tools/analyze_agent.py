@@ -231,8 +231,8 @@ if __name__ == '__main__':
     session['user_id'] = 2
     #learning_analyze("在课程CS101中学生更倾向于什么学习方式？", "learning_activity")
     # prof_wang
-    session['user_id'] = 4
-    learning_analyze("请根据小测和期中测试成绩分布评估课程AI201中学生的学习情况。", "assignment")
+    #session['user_id'] = 4
+    learning_analyze("请根据小测和期中测试成绩分布评估课程CS101中学生的学习情况。", "assignment")
 
 '''
 for candle in darkness:

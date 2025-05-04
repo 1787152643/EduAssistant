@@ -1,11 +1,13 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from app.services.course_service import CourseService
 from app.services.assignment_service import AssignmentService
 from app.services.user_service import UserService
 from app.services.knowledge_point_service import KnowledgePointService
 from app.models.user import User
 from app.models.course import Course
+from app.models.assignment import Assignment, Question, QuestionOption, QuestionType, StudentAssignment, StudentResponse
 from datetime import datetime
+import json
 
 course_bp = Blueprint('course', __name__, url_prefix='/course')
 
@@ -144,7 +146,6 @@ def unenroll(course_id):
     
     return redirect(url_for('course.view', course_id=course_id))
 
-
 @course_bp.route('/<int:course_id>/assignment/create', methods=['GET', 'POST'])
 def create_assignment(course_id):
     if 'user_id' not in session:
@@ -164,6 +165,7 @@ def create_assignment(course_id):
         due_date = datetime.fromisoformat(request.form.get('due_date'))
         total_points = float(request.form.get('total_points', 100))
         
+        # 创建作业基本信息
         assignment = AssignmentService.create_assignment(
             title=title,
             description=description,
@@ -171,6 +173,33 @@ def create_assignment(course_id):
             due_date=due_date,
             total_points=total_points
         )
+        
+        # 处理问题部分
+        questions_data = request.form.get('questions_data')
+        if questions_data:
+            questions = json.loads(questions_data)
+            for question_data in questions:
+                question_type = question_data.get('type')
+                question_text = question_data.get('text')
+                points = float(question_data.get('points', 10))
+                
+                # 根据问题类型创建不同的问题
+                if question_type == QuestionType.MULTIPLE_CHOICE:
+                    options = question_data.get('options', [])
+                    AssignmentService.add_question(
+                        assignment_id=assignment.id,
+                        question_text=question_text,
+                        question_type=question_type,
+                        points=points,
+                        options=options
+                    )
+                else:
+                    AssignmentService.add_question(
+                        assignment_id=assignment.id,
+                        question_text=question_text,
+                        question_type=question_type,
+                        points=points
+                    )
         
         # 自动分配给所有学生
         assigned_count = AssignmentService.assign_to_students(assignment.id)
@@ -184,8 +213,6 @@ def create_assignment(course_id):
 def view_assignment(assignment_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    
-    from app.models.assignment import Assignment, StudentAssignment
     
     assignment = Assignment.get_by_id(assignment_id)
     user_id = session['user_id']
@@ -213,12 +240,27 @@ def view_assignment(assignment_id):
     # 获取作业关联的知识点
     knowledge_points = KnowledgePointService.get_assignment_knowledge_points(assignment_id)
     
+    # 获取作业的问题
+    questions = AssignmentService.get_assignment_questions(assignment_id)
+    
+    # 对于每个问题，如果是选择题，获取选项
+    for question in questions:
+        if question.question_type == QuestionType.MULTIPLE_CHOICE:
+            question.options = AssignmentService.get_question_options(question.id)
+    
+    # 获取学生的回答
+    student_responses = {}
+    if student_assignment:
+        student_responses = AssignmentService.get_student_responses(user_id, assignment_id)
+    
     return render_template('course/view_assignment.html',
                          assignment=assignment,
                          is_teacher=is_teacher,
                          student_assignment=student_assignment,
                          submissions=submissions,
-                         knowledge_points=knowledge_points)
+                         knowledge_points=knowledge_points,
+                         questions=questions,
+                         student_responses=student_responses)
 
 @course_bp.route('/assignment/<int:assignment_id>/submit', methods=['POST'])
 def submit_assignment(assignment_id):
@@ -226,10 +268,31 @@ def submit_assignment(assignment_id):
         return redirect(url_for('auth.login'))
     
     user_id = session['user_id']
+    
+    # 处理兼容旧版的纯文本回答
     answer = request.form.get('content')
     
+    # 处理新的结构化问题回答
+    questions = AssignmentService.get_assignment_questions(assignment_id)
+    responses = {}
+    
+    for question in questions:
+        if question.question_type == QuestionType.MULTIPLE_CHOICE:
+            option_id = request.form.get(f'question_{question.id}_option')
+            if option_id:
+                responses[question.id] = {'selected_option_id': int(option_id)}
+        else:
+            answer_text = request.form.get(f'question_{question.id}_answer')
+            if answer_text:
+                responses[question.id] = {'answer_text': answer_text}
+    
     try:
-        AssignmentService.submit_assignment(user_id, assignment_id, answer)
+        AssignmentService.submit_assignment(
+            user_id, 
+            assignment_id, 
+            answer=answer, 
+            responses=responses
+        )
         flash('作业已提交。', 'success')
     except ValueError as e:
         flash(str(e), 'danger')
@@ -238,21 +301,40 @@ def submit_assignment(assignment_id):
 
 @course_bp.route('/assignment/<int:assignment_id>/submission/<int:student_id>', methods=['GET'])
 def view_submission(assignment_id, student_id):
-
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+        
+    user_id = session['user_id']
     assignment = AssignmentService.get_assignment_by_id(assignment_id)
-    from app.models.user import User
-    from app.models.assignment import StudentAssignment
+    
+    # 验证权限
+    if assignment.course.teacher_id != user_id and user_id != student_id:
+        flash('您没有权限查看此提交。', 'warning')
+        return redirect(url_for('course.view_assignment', assignment_id=assignment_id))
+    
     student = User.get_by_id(student_id)
     submission = StudentAssignment.get(
         StudentAssignment.student==student,
         StudentAssignment.assignment==assignment
     )
+    
+    # 获取作业的问题
+    questions = AssignmentService.get_assignment_questions(assignment_id)
+    
+    # 获取学生的回答
+    student_responses = AssignmentService.get_student_responses(student_id, assignment_id)
+    
+    # 对于每个问题，如果是选择题，获取选项
+    for question in questions:
+        if question.question_type == QuestionType.MULTIPLE_CHOICE:
+            question.options = AssignmentService.get_question_options(question.id)
 
     return render_template('course/view_submission.html', 
                           assignment=assignment, 
                           student=student,
-                          submission=submission)
-
+                          submission=submission,
+                          questions=questions,
+                          student_responses=student_responses)
 
 @course_bp.route('/assignment/<int:assignment_id>/grade/<int:student_id>', methods=['POST'])
 def grade_assignment(assignment_id, student_id):
@@ -260,8 +342,6 @@ def grade_assignment(assignment_id, student_id):
         return redirect(url_for('auth.login'))
     
     user_id = session['user_id']
-    from app.models.assignment import Assignment
-    
     assignment = Assignment.get_by_id(assignment_id)
     
     # 验证权限
@@ -269,16 +349,53 @@ def grade_assignment(assignment_id, student_id):
         flash('只有教师可以评分。', 'warning')
         return redirect(url_for('dashboard.index'))
     
-    score = float(request.form.get('score', 0))
-    feedback = request.form.get("feedback")
+    # 处理兼容旧版的整体评分
+    score = request.form.get('score')
+    feedback = request.form.get('feedback')
     
-    try:
-        AssignmentService.grade_assignment(student_id, assignment_id, score, feedback)
-        flash('评分已保存。', 'success')
-    except ValueError as e:
-        flash(str(e), 'danger')
+    if score:
+        try:
+            AssignmentService.grade_assignment(
+                student_id=student_id, 
+                assignment_id=assignment_id, 
+                score=float(score), 
+                feedback=feedback
+            )
+            flash('评分已保存。', 'success')
+        except ValueError as e:
+            flash(str(e), 'danger')
+    else:
+        # 处理新的按问题评分
+        questions = AssignmentService.get_assignment_questions(assignment_id)
+        
+        for question in questions:
+            question_score = request.form.get(f'question_{question.id}_score')
+            question_feedback = request.form.get(f'question_{question.id}_feedback')
+            
+            if question_score:
+                try:
+                    AssignmentService.grade_question_response(
+                        student_id=student_id,
+                        question_id=question.id,
+                        score=float(question_score),
+                        feedback=question_feedback
+                    )
+                except Exception as e:
+                    flash(f'问题 {question.id} 评分失败: {str(e)}', 'danger')
+        
+        flash('所有问题的评分已保存。', 'success')
     
     return redirect(url_for('course.view_submission', assignment_id=assignment_id, student_id=student_id))
+
+# 添加一个AJAX接口用于动态添加问题选项
+@course_bp.route('/api/question_option_template', methods=['GET'])
+def question_option_template():
+    index = request.args.get('index', 0, type=int)
+    question_index = request.args.get('question_index', 0, type=int)
+    
+    return render_template('course/_question_option.html', 
+                          index=index,
+                          question_index=question_index)
 
 @course_bp.route('/<int:course_id>/knowledge_point/add', methods=['POST'])
 def add_knowledge_point(course_id):
