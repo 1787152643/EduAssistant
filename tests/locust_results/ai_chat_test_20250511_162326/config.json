@@ -1,0 +1,14 @@
+{
+  "host": "http://localhost:5000",
+  "users": 10,
+  "spawn_rate": 2,
+  "run_time": "10m",
+  "output_dir": "locust_results",
+  "test_name": "ai_chat_test_20250511_162326",
+  "simple_weight": 3,
+  "medium_weight": 2,
+  "complex_weight": 1,
+  "wait_time_min": 5,
+  "wait_time_max": 15,
+  "chats_per_user": 3
+}

@@ -1,0 +1,13 @@
+failed to solve: python:3.10-slim: failed to resolve source metadata for docker.io/library/python:3.10-slim: 
+failed to authorize: failed to fetch anonymous token: Get "https://auth.docker.io/token?scope=repository%3Alibrary%2Fpython%3Apull&service=registry.docker.io": dial tcp [2a03:2880:f136:83:face:b00c:0:25de]:443: connectex: A connection attempt failed because the connected party did not properly respond after a period of time, 
+or established connection failed because connected host has failed to respond.
+
+abs.exe -n 1000 -c 50 -k -H "Cookie: session=eyJ1c2VyX2lkIjozLCJ1c2VybmFtZSI6ImRyX2xpdSJ9.aBg7rw.kBKnH7l34xttW7l5675IzfH0Rfg" "http://localhost:5000/search/api/search?q=python"
+
+# 测试50并发/1000次请求（替换实际chat_id）
+abs -n 100 -c 5  -T 'application/json'  -p message.json  -H "Content-Type: application/json" -H "Cookie: session=eyJ1c2VyX2lkIjozLCJ1c2VybmFtZSI6ImRyX2xpdSJ9.aBg7rw.kBKnH7l34xttW7l5675IzfH0Rfg" http://localhost:5000/ai-assistant/chats/53/messages
+
+abs -n 100 -c 5  -m POST  -T "application/json"  -H "Cookie: session=eyJ1c2VyX2lkIjozLCJ1c2VybmFtZSI6ImRyX2xpdSJ9.aBg7rw.kBKnH7l34xttW7l5675IzfH0Rfg"  http://localhost:5000/ai-assistant/chats
+
+locust -f locustfile.py --host=http://localhost:5000 --users=10 --spawn-rate=2 --run-time=10m --headless 
+--only-summary --csv=results_baseline

@@ -1,0 +1,37 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=you-will-never-guess
+      - DATABASE_NAME=eduassistant-v3
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=rachel
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - CHROMA_PERSIST_DIRECTORY=./chroma_db
+      - DEEPSEEK_API_KEY=
+    depends_on:
+      - db
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+      - chroma_data:/app/chroma_db
+
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=rachel
+      - POSTGRES_DB=eduassistant-v3
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+  chroma_data:

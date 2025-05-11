@@ -1,0 +1,4 @@
+Method,Name,Error,Occurrences
+POST,Send simple message,CatchResponseError('Request failed with status code: 404'),61
+POST,Send complex message,CatchResponseError('Request failed with status code: 404'),26
+POST,Send medium message,CatchResponseError('Request failed with status code: 404'),50

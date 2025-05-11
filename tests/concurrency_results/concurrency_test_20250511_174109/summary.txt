@@ -1,0 +1,21 @@
+Concurrency Test Summary
+======================
+
+Test completed at: 2025-05-11 17:42:09
+Message type: simple
+Number of users: 0
+
+Results:
+  Total requests: 10
+  Successful requests: 10
+  Success rate: 100.00%
+
+Response Time (successful requests):
+  Average: 15.60 seconds
+  Minimum: 11.99 seconds
+  Maximum: 20.13 seconds
+  Median (P50): 15.00 seconds
+  P90: 20.13 seconds
+  P95: 20.13 seconds
+  P99: 20.13 seconds
+  Standard Deviation: 2.65 seconds

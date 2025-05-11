@@ -6,7 +6,7 @@
 #from .tools.bocha import bocha_search
 #from .tools.sql import *
 import app.react.tools.analyze_agent
-import app.react.tools.wiki
+#import app.react.tools.wiki
 #from vertexai.generative_models import Part 
 from app.utils.io import write_to_file
 from app.utils.logging import logger
@@ -25,7 +25,7 @@ from typing import List
 from typing import Dict 
 import json
 from app.services.user_service import UserService
-
+import re
 from playhouse.shortcuts import model_to_dict
 from flask import session
 from app.models.user import User
@@ -184,7 +184,7 @@ class Agent:
             #database_schema=database_schema
         )
         if self.current_iteration == 1:
-            print(prompt)
+            pass #print(prompt)
 
         response = self.ask_llm(prompt)
         logger.info(f"Thinking => {response}")
@@ -202,6 +202,11 @@ class Agent:
             cleaned_response = response.strip().strip('`').strip()
             if cleaned_response.startswith('json'):
                 cleaned_response = cleaned_response[4:].strip()
+            
+            # Improve JSON sanitization
+            cleaned_response = re.sub(r'[\x00-\x1F\x7F]', '', cleaned_response)
+            # Additionally escape special characters in code blocks
+            cleaned_response = re.sub(r'```(.*?)```', lambda m: json.dumps(m.group(0))[1:-1], cleaned_response, flags=re.DOTALL)
             
             parsed_response = json.loads(cleaned_response)
             

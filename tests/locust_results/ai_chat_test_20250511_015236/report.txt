@@ -1,0 +1,66 @@
+AI Chat Interface Concurrency Test Report
+======================================
+
+Test completed at: 2025-05-11 02:02:36
+Test duration: 10m
+Number of users: 10
+Spawn rate: 2 users/second
+
+Summary Statistics
+-----------------
+
+SIMPLE Messages (38 requests):
+  Response Time:
+    Average: 24.63 seconds
+    Min: 11.60 seconds
+    Max: 352.33 seconds
+    95th percentile: 40.88 seconds
+    Standard deviation: 54.82 seconds
+  Response Length:
+    Average: 548 characters
+    Min: 223 characters
+    Max: 1258 characters
+
+MEDIUM Messages (20 requests):
+  Response Time:
+    Average: 66.84 seconds
+    Min: 17.85 seconds
+    Max: 459.23 seconds
+    95th percentile: 459.23 seconds
+    Standard deviation: 124.11 seconds
+  Response Length:
+    Average: 2884 characters
+    Min: 397 characters
+    Max: 21311 characters
+
+COMPLEX Messages (7 requests):
+  Response Time:
+    Average: 22.96 seconds
+    Min: 12.41 seconds
+    Max: 29.00 seconds
+    Standard deviation: 5.36 seconds
+  Response Length:
+    Average: 1422 characters
+    Min: 497 characters
+    Max: 1951 characters
+
+Overall Statistics:
+  Total requests: 65
+  Average response time: 37.44 seconds
+
+Test Configuration:
+------------------
+  host: http://localhost:5000
+  users: 10
+  spawn_rate: 2
+  run_time: 10m
+  output_dir: locust_results
+  test_name: ai_chat_test_20250511_015236
+  simple_weight: 3
+  medium_weight: 2
+  complex_weight: 1
+  wait_time_min: 5
+  wait_time_max: 15
+  chats_per_user: 3
+
+Note: Detailed results available in CSV format at locust_results\ai_chat_test_20250511_015236\detailed_results.csv
