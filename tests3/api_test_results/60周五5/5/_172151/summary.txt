@@ -1,0 +1,37 @@
+Testing started at 17:21:51.43 
+Base URL: http://124.71.46.184:5000 
+Requests: 100 
+Concurrency: 10 
+ 
+---------------------------- 
+Authentication Tests 
+---------------------------- 
+Login: Requests per second:    28.84 [#/sec] (mean) 
+ 
+---------------------------- 
+Course Tests 
+---------------------------- 
+Course List: Requests per second:    30.62 [#/sec] (mean) 
+Course View: Requests per second:    30.01 [#/sec] (mean) 
+ 
+---------------------------- 
+Assignment Tests 
+---------------------------- 
+Assignment View: Requests per second:    29.96 [#/sec] (mean) 
+ 
+---------------------------- 
+Search Tests 
+---------------------------- 
+Search API: Requests per second:    22.74 [#/sec] (mean) 
+ 
+---------------------------- 
+Analytics Tests 
+---------------------------- 
+Student Analytics: Requests per second:    15.83 [#/sec] (mean) 
+Course Analytics: Requests per second:    6.15 [#/sec] (mean) 
+ 
+---------------------------- 
+Stress Tests (Concurrency=25) 
+---------------------------- 
+Stress Course List: Requests per second:    23.30 [#/sec] (mean) 
+Testing completed at 17:22:36.75 

@@ -1,5 +1,5 @@
 from flask import Flask
-from app.ext import initialize_extensions
+from app.ext import initialize_extensions, cache
 from app.config import Config
 
 def create_app(config_class=Config):
@@ -8,6 +8,9 @@ def create_app(config_class=Config):
     
     # 初始化扩展 (postgres, chroma)
     initialize_extensions()
+    
+    # 初始化缓存
+    cache.init_app(app)
     
     # 注册蓝图
     from app.views.auth import auth_bp

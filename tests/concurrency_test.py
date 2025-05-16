@@ -10,7 +10,7 @@ import csv
 
 # Test Configuration
 CONFIG = {
-    "host": "http://localhost:5000",
+    "host": "http://124.71.46.184:5000",
     "message_type": "simple",  # Use 'simple', 'medium', or 'complex'
     "output_dir": "concurrency_results",
     "test_name": f"concurrency_test_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"

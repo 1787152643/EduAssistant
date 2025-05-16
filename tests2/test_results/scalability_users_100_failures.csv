@@ -1,0 +1,5 @@
+Method,Name,Error,Occurrences
+GET,/search/?q=programming%20basics,CatchResponseError('Knowledge base search failed with status 500'),178
+GET,/search/?q=machine%20learning,CatchResponseError('Knowledge base search failed with status 500'),163
+GET,/search/?q=database%20design,CatchResponseError('Knowledge base search failed with status 500'),154
+GET,/search/?q=algorithms,CatchResponseError('Knowledge base search failed with status 500'),145

@@ -1,0 +1,8 @@
+Method,Name,Error,Occurrences
+POST,/login,CatchResponseError('Login failed with status 0'),135
+POST,Send simple message,CatchResponseError('Request failed with status code: 500'),126
+POST,/ai-assistant/chats,CatchResponseError('Chat creation failed with status 0'),15
+POST,/ai-assistant/chats,CatchResponseError('Chat creation failed with status 500'),81
+POST,Send simple message,CatchResponseError('Request failed with status code: 0'),2
+POST,/login,CatchResponseError('Login failed with status 500'),377
+POST,/,CatchResponseError('Login failed with status 0'),1

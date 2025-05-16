@@ -9,6 +9,7 @@ from app.models.knowledge_base import KnowledgeBase
 from typing import List, Dict, Optional
 from peewee import DoesNotExist
 from app.react.tools_register import register_as_tool
+from app.ext import cache
 
 class KnowledgePointService:
 
@@ -51,6 +52,9 @@ class KnowledgePointService:
                 parent=parent
             )
             
+            # 清除课程知识点缓存
+            cache.delete_memoized(KnowledgePointService.get_course_knowledge_points, course_id)
+            
             return knowledge_point
         
         except DoesNotExist:
@@ -58,6 +62,7 @@ class KnowledgePointService:
 
     @register_as_tool(roles=["student", "teacher"])
     @staticmethod
+    @cache.memoize(timeout=300)
     def get_knowledge_point(knowledge_point_id: int) -> KnowledgePoint:
         """获取指定ID的知识点。
         
@@ -77,6 +82,7 @@ class KnowledgePointService:
 
     @register_as_tool(roles=["student", "teacher"])
     @staticmethod
+    @cache.memoize(timeout=300)
     def get_course_knowledge_points(course_id: int, include_tree: bool = False) -> List[KnowledgePoint]:
         """获取指定课程的所有知识点。
         
@@ -159,6 +165,9 @@ class KnowledgePointService:
                 
                 except DoesNotExist:
                     raise ValueError(f"知识点ID {kp_id} 不存在")
+            
+            # 清除作业知识点缓存
+            cache.delete_memoized(KnowledgePointService.get_assignment_knowledge_points, assignment_id)
             
             return results
             
@@ -266,6 +275,7 @@ class KnowledgePointService:
             return False
 
     @staticmethod
+    @cache.memoize(timeout=300)
     def get_assignment_knowledge_points(assignment_id: int) -> List[Dict]:
         """获取作业关联的所有知识点。
         

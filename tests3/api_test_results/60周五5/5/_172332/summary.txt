@@ -1,0 +1,23 @@
+Testing started at 17:23:33.00 
+Base URL: http://124.71.46.184:5000 
+Requests: 1000 
+Concurrency: 100 
+ 
+---------------------------- 
+Authentication Tests 
+---------------------------- 
+Login: Requests per second:    27.49 [#/sec] (mean) 
+ 
+---------------------------- 
+Course Tests 
+---------------------------- 
+Course List: Requests per second:    11.85 [#/sec] (mean) 
+ 
+---------------------------- 
+Assignment Tests 
+---------------------------- 
+Assignment View: Requests per second:    2.53 [#/sec] (mean) 
+ 
+---------------------------- 
+Search Tests 
+---------------------------- 

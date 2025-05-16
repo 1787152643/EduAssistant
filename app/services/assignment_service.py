@@ -4,6 +4,7 @@ from app.models.assignment import Assignment, StudentAssignment, Question, Quest
 from app.models.course import Course, StudentCourse
 from app.react.tools_register import register_as_tool
 from peewee import DoesNotExist, fn
+from app.ext import cache
 
 class AssignmentService:
     """作业服务类，处理作业管理和学生作业提交。
@@ -27,13 +28,18 @@ class AssignmentService:
             Assignment: 创建的作业对象
         """
         course = Course.get_by_id(course_id)
-        return Assignment.create(
+        assignment = Assignment.create(
             title=title,
             description=description,
             course=course,
             due_date=due_date,
             total_points=total_points
         )
+        
+        # 清除课程作业缓存
+        cache.delete_memoized(AssignmentService.get_course_assignments, course_id)
+        
+        return assignment
     
     @staticmethod
     def add_question(assignment_id, question_text, question_type, points=10.0, options=None):
@@ -420,6 +426,7 @@ class AssignmentService:
     
     @register_as_tool(roles=["teacher"])
     @staticmethod
+    @cache.memoize(timeout=300)
     def get_course_assignments(course_id):
         """获取课程的所有作业。
         

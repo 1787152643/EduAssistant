@@ -1,0 +1,140 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>EduAssistant Performance Test Report</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1, h2, h3 { color: #333; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            .success { color: green; }
+            .warning { color: orange; }
+            .danger { color: red; }
+            .summary { background-color: #eef; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+            img { max-width: 100%; height: auto; margin: 10px 0; }
+        </style>
+    </head>
+    <body>
+        <h1>EduAssistant Performance Test Report</h1>
+        <p>Report generated at: 2025-05-16 15:48:18</p>
+        
+        <div class="summary">
+            <h2>Test Summary</h2>
+            <p><strong>Total Requests:</strong> 24,712</p>
+            <p><strong>Overall Success Rate:</strong> 
+                <span class="danger">86.99%</span>
+            </p>
+            <p><strong>Average Response Time:</strong> 179.11 ms</p>
+        </div>
+        
+        <h2>Component Performance</h2>
+        <img src="response_time_by_component.png" alt="Response Time by Component">
+        <img src="success_rate_by_component.png" alt="Success Rate by Component">
+        <img src="throughput_by_component.png" alt="Throughput by Component">
+        
+        <h2>Component Summary</h2>
+        <table>
+            <tr>
+                <th>Component</th>
+                <th>Requests</th>
+                <th>Success Rate</th>
+                <th>Avg Response Time (ms)</th>
+                <th>P95 Response Time (ms)</th>
+                <th>Throughput (req/s)</th>
+            </tr>
+    
+            <tr>
+                <td>analytics</td>
+                <td>1,252</td>
+                <td class="danger">76.52%</td>
+                <td>177.14</td>
+                <td>178.13</td>
+                <td>7.00</td>
+            </tr>
+        
+            <tr>
+                <td>assignments</td>
+                <td>1,652</td>
+                <td class="danger">76.39%</td>
+                <td>167.25</td>
+                <td>193.23</td>
+                <td>9.21</td>
+            </tr>
+        
+            <tr>
+                <td>authentication</td>
+                <td>2,498</td>
+                <td class="danger">76.22%</td>
+                <td>178.66</td>
+                <td>211.91</td>
+                <td>13.93</td>
+            </tr>
+        
+            <tr>
+                <td>combined</td>
+                <td>6,868</td>
+                <td class="danger">76.03%</td>
+                <td>183.36</td>
+                <td>256.91</td>
+                <td>22.96</td>
+            </tr>
+        
+            <tr>
+                <td>courses</td>
+                <td>2,054</td>
+                <td class="danger">76.34%</td>
+                <td>170.06</td>
+                <td>183.18</td>
+                <td>11.46</td>
+            </tr>
+        
+            <tr>
+                <td>knowledge_base</td>
+                <td>1,246</td>
+                <td class="danger">75.92%</td>
+                <td>172.03</td>
+                <td>188.94</td>
+                <td>6.94</td>
+            </tr>
+        
+            <tr>
+                <td>scalability_users_100</td>
+                <td>5,348</td>
+                <td class="danger">76.07%</td>
+                <td>217.70</td>
+                <td>457.47</td>
+                <td>44.70</td>
+            </tr>
+        
+            <tr>
+                <td>scalability_users_20</td>
+                <td>1,076</td>
+                <td class="danger">76.95%</td>
+                <td>165.52</td>
+                <td>206.80</td>
+                <td>9.05</td>
+            </tr>
+        
+            <tr>
+                <td>scalability_users_50</td>
+                <td>2,718</td>
+                <td class="danger">76.31%</td>
+                <td>177.15</td>
+                <td>201.38</td>
+                <td>22.89</td>
+            </tr>
+        
+        </table>
+        
+        <h2>System Recommendations</h2>
+        <ul>
+            <li>For components with high response times, consider optimization or caching strategies</li>
+            <li>For components with low success rates, investigate error causes and improve error handling</li>
+            <li>Monitor database connection pool during high load periods</li>
+        </ul>
+    </body>
+    </html>
+    

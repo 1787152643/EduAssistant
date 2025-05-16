@@ -2,6 +2,7 @@ from app.models.course import Course, StudentCourse
 from app.models.assignment import *
 from app.models.user import User
 from app.react.tools_register import register_as_tool
+from app.ext import cache
 
 class CourseService:
     """课程服务类，处理课程管理和学生课程关联。
@@ -29,12 +30,16 @@ class CourseService:
             raise ValueError(f"课程代码 '{code}' 已存在")
         
         teacher = User.get_by_id(teacher_id)
-        return Course.create(
+        course = Course.create(
             name=name,
             code=code,
             description=description,
             teacher=teacher
         )
+        # 清除课程缓存
+        cache.delete('all_courses')
+        cache.delete_memoized(CourseService.get_courses_by_teacher, teacher_id)
+        return course
     
     @staticmethod
     def enroll_student(course_id, student_id):
@@ -64,6 +69,9 @@ class CourseService:
                 assignment=assignment
             ).save()
 
+        # 清除学生课程缓存
+        cache.delete_memoized(CourseService.get_courses_by_student, student_id)
+        
         return StudentCourse.create(
             course_id=course_id,
             student_id=student_id
@@ -94,10 +102,14 @@ class CourseService:
                 StudentAssignment.assignment==assignment
             ).execute()
 
+        # 清除学生课程缓存
+        cache.delete_memoized(CourseService.get_courses_by_student, student_id)
+        
         return student_course.delete_instance()
 
     @register_as_tool(roles=["student", "teacher"])
     @staticmethod
+    @cache.cached(timeout=300, key_prefix='all_courses')
     def get_all_courses():
         """获取所有的课程
 
@@ -108,6 +120,7 @@ class CourseService:
     
     @register_as_tool(roles=["teacher"])
     @staticmethod
+    @cache.memoize(timeout=300)
     def get_courses_by_teacher(teacher_id):
         """获取教师所教授的所有课程。
         
@@ -121,6 +134,7 @@ class CourseService:
     
     @register_as_tool(roles=["student", "teacher"])
     @staticmethod
+    @cache.memoize(timeout=300)
     def get_courses_by_student(student_id):
         """获取学生所参与的所有课程。
         
@@ -136,6 +150,7 @@ class CourseService:
     
     @register_as_tool(roles=["teacher"])
     @staticmethod
+    @cache.memoize(timeout=300)
     def get_students_by_course(course_id):
         """获取参与课程的所有学生。
         

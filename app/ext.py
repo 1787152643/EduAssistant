@@ -2,9 +2,11 @@
 
 from playhouse.postgres_ext import PostgresqlExtDatabase
 from chromadb import PersistentClient
+from flask_caching import Cache
 import os
 
 db = PostgresqlExtDatabase(None)
+cache = Cache()
 
 chroma_client = None
 knowledge_base_collection = None

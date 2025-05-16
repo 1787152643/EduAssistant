@@ -5,10 +5,12 @@ from app.services.analytics_service import AnalyticsService
 from app.services.user_service import UserService
 from app.services.recommend_service import RecommendService
 from app.models.user import User
+from app.ext import cache
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
 @dashboard_bp.route('/')
+@cache.cached(timeout=60, unless=lambda: 'user_id' not in session)
 def index():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

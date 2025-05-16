@@ -1,6 +1,0 @@
-{
-  "host": "http://localhost:5000",
-  "message_type": "simple",
-  "output_dir": "concurrency_results",
-  "test_name": "concurrency_test_20250511_175030"
-}

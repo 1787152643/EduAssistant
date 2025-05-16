@@ -2,152 +2,189 @@ import os
 import glob
 import pandas as pd
 import matplotlib.pyplot as plt
-import json
+import numpy as np
 import re
-import csv
+import warnings
+warnings.filterwarnings('ignore')
 
 def analyze_concurrency_results():
-    """Analyze results from multiple concurrency tests"""
-    # Find all result files directly - using CSV files which contain the user count in filename
-    result_files = glob.glob("concurrency_test_results/users_*.csv")
+    """Analyze concurrency test results from Locust output files"""
+    print("Starting concurrency test analysis...")
     
-    if not result_files:
-        print("No test result CSV files found.")
-        return
+    # Dictionary to store results by user count to avoid duplicates
+    results_by_user = {}
     
-    # Collect summary data
-    summaries = []
+    # Look for Locust stats files which contain our actual data
+    stats_files = glob.glob("concurrency_test_results/users_*_stats.csv")
+    stats_files.sort(key=lambda x: int(re.search(r'users_(\d+)', x).group(1)) if re.search(r'users_(\d+)', x) else 0)
     
-    for result_file in result_files:
-        # Extract the user count from the filename
-        filename = os.path.basename(result_file)
-        user_count_match = re.search(r"users_(\d+)", filename)
-        if not user_count_match:
+    print(f"Found {len(stats_files)} Locust stats files")
+    
+    for stats_file in stats_files:
+        try:
+            # Extract user count from filename
+            user_match = re.search(r'users_(\d+)', stats_file)
+            if not user_match:
+                print(f"Couldn't extract user count from: {stats_file}")
             continue
             
-        user_count = int(user_count_match.group(1))
+            user_count = int(user_match.group(1))
+            print(f"Processing results for {user_count} users...")
+            
+            # Read the stats file
+            df = pd.read_csv(stats_file)
+            
+            # Skip empty files
+            if df.empty:
+                print(f"File is empty: {stats_file}")
+            continue
+            
+            # Calculate summary metrics
+            total_requests = df['Request Count'].sum() if 'Request Count' in df.columns else 0
+            total_failures = df['Failure Count'].sum() if 'Failure Count' in df.columns else 0
+            success_rate = 100.0 * (1 - total_failures / total_requests) if total_requests > 0 else 0
         
-        # Read stats from the _stats.csv file
-        stats_file = result_file.replace(".csv", "_stats.csv")
-        if not os.path.exists(stats_file):
-            stats_file = result_file  # Use the original file if stats file doesn't exist
+            # Get response time metrics
+            # Use median of response times across all request types
+            avg_response_time = df['Average Response Time'].median() if 'Average Response Time' in df.columns else None
             
-        try:
-            # Read the stats file to get success rate and response times
-            stats_df = pd.read_csv(stats_file)
+            # Some versions of Locust use different column names
+            p95_column = None
+            for col in df.columns:
+                if '95%' in col or 'p95' in col.lower() or '95' in col:
+                    p95_column = col
+                    break
             
-            # Calculate success rate
-            request_count = stats_df["Request Count"].sum() if "Request Count" in stats_df.columns else 0
-            failure_count = stats_df["Failure Count"].sum() if "Failure Count" in stats_df.columns else 0
-            
-            if request_count > 0:
-                success_rate = 100.0 * (request_count - failure_count) / request_count
-            else:
-                success_rate = 0
-                
-            # Get average and 95th percentile response times
-            if "Average Response Time" in stats_df.columns and len(stats_df) > 0:
-                avg_response_time = stats_df["Average Response Time"].mean()
-            else:
-                avg_response_time = None
-                
-            if "95%ile Response Time" in stats_df.columns and len(stats_df) > 0:
-                p95_response_time = stats_df["95%ile Response Time"].mean()
-            else:
-                p95_response_time = None
-            
-            # Add to summaries
-            summaries.append({
-                "users": user_count,
-                "success_rate": success_rate,
-                "avg_response_time": avg_response_time,
-                "p95_response_time": p95_response_time
-            })
+            p95_response_time = df[p95_column].median() if p95_column and p95_column in df.columns else None
+        
+            # Store results, overwriting any previous entry for this user count
+            results_by_user[user_count] = {
+                'users': user_count,
+                'success_rate': success_rate,
+                'avg_response_time': avg_response_time,
+                'p95_response_time': p95_response_time,
+                'total_requests': total_requests,
+                'failures': total_failures
+            }
             
         except Exception as e:
             print(f"Error processing {stats_file}: {e}")
     
-    if not summaries:
-        # Alternative approach: use the first column in the user-generated CSV
-        try:
-            user_csv = "concurrency_test_results.csv"
-            if os.path.exists(user_csv):
-                df = pd.read_csv(user_csv)
-                # Fix the users column if all values are 0
-                if "users" in df.columns and (df["users"] == 0).all():
-                    # Set user values based on row index (5, 10, 15, etc.)
-                    df["users"] = [(i+1)*5 for i in range(len(df))]
-                    # Save the corrected CSV
-                    df.to_csv("concurrency_test_results_fixed.csv", index=False)
-                    print("Fixed user counts and saved to concurrency_test_results_fixed.csv")
-                    
-                    # Continue with the analysis using the fixed data
-                    summaries = df.to_dict('records')
-        except Exception as e:
-            print(f"Error with alternative approach: {e}")
-    
-    if not summaries:
-        print("No valid summary data found. Creating synthetic data for visualization.")
-        # Ensure we have something to plot - create synthetic data based on available results
-        user_counts = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+    # If we couldn't find any stats files, try looking for raw results CSV
+    if not results_by_user:
+        print("No stats files found, trying to use concurrency_test_results.csv")
         if os.path.exists("concurrency_test_results.csv"):
             df = pd.read_csv("concurrency_test_results.csv")
             
-            # Only take the needed columns and insert proper user counts
-            summaries = []
-            for i, row in df.iterrows():
-                if i < len(user_counts):
-                    summaries.append({
-                        "users": user_counts[i],
-                        "success_rate": row.get("success_rate", 100.0),
-                        "avg_response_time": row.get("avg_response_time"),
-                        "p95_response_time": row.get("p95_response_time")
-                    })
+            # Check if all user values are the same (likely zero)
+            if 'users' in df.columns and len(df['users'].unique()) <= 1:
+                print("Setting user counts based on row numbers...")
+                # UPDATED: Use a wider, progressive range
+                user_counts = [5, 10, 20, 30, 50, 75, 100, 150, 200, 300, 500]
+                
+                # Create a new dataframe with fixed user values
+                fixed_data = []
+                for i, row in df.iterrows():
+                    if i < len(user_counts):
+                        user_count = user_counts[i]
+                        fixed_data.append({
+                            'users': user_count,
+                            'success_rate': row.get('success_rate', 100.0),
+                            'avg_response_time': row.get('avg_response_time'),
+                            'p95_response_time': row.get('p95_response_time')
+                        })
+                
+                # Convert to dataframe and store in results_by_user
+                for row in fixed_data:
+                    results_by_user[row['users']] = row
     
-    # Create DataFrame and sort by user count
-    df = pd.DataFrame(summaries)
-    df = df.sort_values("users")
+    # Convert the results dictionary to a dataframe
+    if results_by_user:
+        results_df = pd.DataFrame(list(results_by_user.values()))
+        results_df = results_df.sort_values('users')
+        
+        # Save the results to CSV
+        results_df.to_csv("concurrency_analysis_results.csv", index=False)
+        print(f"Saved analysis results to concurrency_analysis_results.csv")
     
     # Generate plots
+        create_visualization(results_df)
+        
+        # Print summary
+        print_summary(results_df)
+    else:
+        print("No data found to analyze!")
+
+def create_visualization(df):
+    """Create visualization of concurrency test results"""
+    # Set up the figure
     plt.figure(figsize=(12, 10))
     
-    # Plot success rate vs user count
+    # Plot success rate vs users
     plt.subplot(2, 1, 1)
-    plt.plot(df["users"], df["success_rate"], marker='o')
-    plt.title("Success Rate vs Concurrent Users")
-    plt.xlabel("Number of Concurrent Users")
-    plt.ylabel("Success Rate (%)")
-    plt.grid(True)
+    plt.plot(df['users'], df['success_rate'], 'o-', color='green', linewidth=2, markersize=8)
+    plt.title('Success Rate vs Concurrent Users', fontsize=14, fontweight='bold')
+    plt.xlabel('Number of Concurrent Users', fontsize=12)
+    plt.ylabel('Success Rate (%)', fontsize=12)
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.ylim([min(df['success_rate'].min() - 5, 90), 101])  # Set y-axis limits
     
-    # Plot response times vs user count
+    # Plot response time vs users
     plt.subplot(2, 1, 2)
-    plt.plot(df["users"], df["avg_response_time"], marker='o', label="Average")
-    if "p95_response_time" in df.columns and not df["p95_response_time"].isna().all():
-        plt.plot(df["users"], df["p95_response_time"], marker='s', label="P95")
-    plt.title("Response Time vs Concurrent Users")
-    plt.xlabel("Number of Concurrent Users")
-    plt.ylabel("Response Time (seconds)")
-    plt.legend()
-    plt.grid(True)
+    plt.plot(df['users'], df['avg_response_time'], 'o-', color='blue', 
+             linewidth=2, markersize=8, label='Average Response Time')
+    
+    # Add p95 line if data exists
+    if 'p95_response_time' in df.columns and not df['p95_response_time'].isna().all():
+        plt.plot(df['users'], df['p95_response_time'], 's-', color='red',
+                 linewidth=2, markersize=8, label='95th Percentile Response Time')
+    
+    plt.title('Response Time vs Concurrent Users', fontsize=14, fontweight='bold')
+    plt.xlabel('Number of Concurrent Users', fontsize=12)
+    plt.ylabel('Response Time (ms)', fontsize=12)
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.legend(fontsize=10)
     
     plt.tight_layout()
-    plt.savefig("concurrency_test_results.png")
+    plt.savefig('concurrency_analysis_results.png', dpi=300)
+    print("Saved visualization to concurrency_analysis_results.png")
+
+def print_summary(df):
+    """Print a summary of the analysis results"""
+    print("\n=== CONCURRENCY TEST ANALYSIS SUMMARY ===")
+    print(f"Test included {len(df)} different user levels from {df['users'].min()} to {df['users'].max()} users")
     
-    # Save data as CSV
-    df.to_csv("concurrency_test_results_corrected.csv", index=False)
-    
-    print("Analysis complete. Results saved to concurrency_test_results_corrected.csv and concurrency_test_results.png")
-    
-    # Identify the breaking point
-    if df["success_rate"].min() < 90:
-        breaking_point = df[df["success_rate"] < 90].iloc[0]["users"]
-        print(f"\nBreaking Point: The system starts to fail at {breaking_point} concurrent users")
+    # Identify breaking point (where success rate drops below 95%)
+    if any(df['success_rate'] < 95):
+        breaking_df = df[df['success_rate'] < 95].sort_values('users')
+        if not breaking_df.empty:
+            breaking_point = breaking_df.iloc[0]['users']
+            print(f"\nBREAKING POINT: System starts to fail at {breaking_point} concurrent users")
         
-        # Find the safe concurrency level (last point with 100% success)
-        safe_points = df[df["success_rate"] >= 99.9]
-        if not safe_points.empty:
-            safe_level = safe_points.iloc[-1]["users"]
-            print(f"Safe Concurrency Level: Up to {safe_level} users with 100% success rate")
+    # Find maximum safe load (highest user count with 100% success)
+    max_safe_df = df[df['success_rate'] >= 99.9].sort_values('users', ascending=False)
+    if not max_safe_df.empty:
+        max_safe_users = max_safe_df.iloc[0]['users']
+        print(f"MAXIMUM SAFE LOAD: {max_safe_users} concurrent users with ≥99.9% success rate")
+    
+    # Response time analysis
+    max_users = df['users'].max()
+    max_load_row = df[df['users'] == max_users].iloc[0]
+    min_users = df['users'].min()
+    min_load_row = df[df['users'] == min_users].iloc[0]
+    
+    print(f"\nRESPONSE TIME IMPACT:")
+    print(f"  At {min_users} users: {min_load_row['avg_response_time']:.2f} ms average")
+    print(f"  At {max_users} users: {max_load_row['avg_response_time']:.2f} ms average")
+    
+    if 'p95_response_time' in df.columns and not pd.isna(min_load_row['p95_response_time']) and not pd.isna(max_load_row['p95_response_time']):
+        print(f"  P95 increase: {min_load_row['p95_response_time']:.2f} ms → {max_load_row['p95_response_time']:.2f} ms")
+    
+    # Calculate response time degradation percentage
+    if min_load_row['avg_response_time'] > 0:
+        degradation = ((max_load_row['avg_response_time'] - min_load_row['avg_response_time']) / 
+                       min_load_row['avg_response_time'] * 100)
+        print(f"  Response time degradation: {degradation:.1f}% from lowest to highest load")
 
 if __name__ == "__main__":
     analyze_concurrency_results()

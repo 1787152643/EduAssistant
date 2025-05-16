@@ -1,0 +1,36 @@
+{
+  "server": "http://124.71.46.184:5000",
+  "stages": [
+    {
+      "name": "authentication",
+      "users": 30,
+      "duration": "3m"
+    },
+    {
+      "name": "courses",
+      "users": 25,
+      "duration": "3m"
+    },
+    {
+      "name": "assignments",
+      "users": 20,
+      "duration": "3m"
+    },
+    {
+      "name": "knowledge_base",
+      "users": 15,
+      "duration": "3m"
+    },
+    {
+      "name": "analytics",
+      "users": 15,
+      "duration": "3m"
+    },
+    {
+      "name": "combined",
+      "users": 50,
+      "duration": "5m"
+    }
+  ],
+  "start_time": "2025-05-16 15:46:09"
+}

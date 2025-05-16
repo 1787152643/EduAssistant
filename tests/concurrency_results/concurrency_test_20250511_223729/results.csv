@@ -1,0 +1,29 @@
+timestamp,user,chat_id,message_type,message_length,duration,status_code,error
+2025-05-11 22:37:38,student002,1414,simple,31,1.918224811553955,500,"<!doctype html>
+<html lang=en>
+  <head>
+    <title>peewee.OperationalError: connection to server at "
+2025-05-11 22:37:39,student001,1417,simple,25,1.6538898944854736,500,"<!doctype html>
+<html lang=en>
+  <head>
+    <title>peewee.OperationalError: connection to server at "
+2025-05-11 22:37:39,student003,1419,simple,25,1.5316364765167236,500,"<!doctype html>
+<html lang=en>
+  <head>
+    <title>peewee.OperationalError: connection to server at "
+2025-05-11 22:37:39,student003,1420,simple,35,1.571751356124878,500,"<!doctype html>
+<html lang=en>
+  <head>
+    <title>peewee.OperationalError: connection to server at "
+2025-05-11 22:37:39,student003,1422,simple,35,1.3918788433074951,500,"<!doctype html>
+<html lang=en>
+  <head>
+    <title>peewee.OperationalError: connection to server at "
+2025-05-11 22:37:39,student001,1423,simple,31,1.416642665863037,500,"<!doctype html>
+<html lang=en>
+  <head>
+    <title>peewee.OperationalError: connection to server at "
+2025-05-11 22:37:39,student002,1424,simple,31,1.4376308917999268,500,"<!doctype html>
+<html lang=en>
+  <head>
+    <title>peewee.OperationalError: connection to server at "

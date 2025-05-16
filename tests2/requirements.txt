@@ -1,0 +1,4 @@
+locust==2.23.1
+matplotlib==3.8.2
+pandas==2.2.0
+numpy==1.26.2

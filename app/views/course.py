@@ -6,12 +6,14 @@ from app.services.knowledge_point_service import KnowledgePointService
 from app.models.user import User
 from app.models.course import Course
 from app.models.assignment import Assignment, Question, QuestionOption, QuestionType, StudentAssignment, StudentResponse
+from app.ext import cache
 from datetime import datetime
 import json
 
 course_bp = Blueprint('course', __name__, url_prefix='/course')
 
 @course_bp.route('/')
+@cache.cached(timeout=60, unless=lambda: 'user_id' not in session)
 def index():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
