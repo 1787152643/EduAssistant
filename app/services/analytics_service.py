@@ -82,13 +82,16 @@ class AnalyticsService:
         
         if course_id:
             query = query.join(KnowledgePoint).where(KnowledgePoint.course_id == course_id)
+        
+        # Eagerly load KnowledgePoint to avoid N+1 on accessing record.knowledge_point.name
+        query = query.prefetch(KnowledgePoint)
             
         results = {}
         for record in query:
             results[record.knowledge_point_id] = {
                 'mastery_level': record.mastery_level,
                 'last_interaction': record.last_interaction,
-                'knowledge_point_name': record.knowledge_point.name
+                'knowledge_point_name': record.knowledge_point.name # This should now be efficient
             }
             
         return results
@@ -191,6 +194,9 @@ class AnalyticsService:
         now = datetime.now()
         
         query = StudentAssignment.select().join(Assignment)
+        # Ensure Assignment data is loaded efficiently
+        query = query.prefetch(Assignment) 
+
         query = query.where(
             (StudentAssignment.student_id == student_id) &
             (StudentAssignment.completed == False) &

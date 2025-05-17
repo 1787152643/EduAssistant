@@ -5,6 +5,8 @@ from app.services.analytics_service import AnalyticsService
 from app.services.user_service import UserService
 from app.services.recommend_service import RecommendService
 from app.models.user import User
+from app.models.course import Course
+from app.models.assignment import Assignment
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -27,10 +29,31 @@ def index():
         context['courses'] = courses
         
         # 获取最近作业
-        recent_assignments = []
-        for course in courses:
-            assignments = AssignmentService.get_course_assignments(course.id)
-            recent_assignments.extend(assignments)
+        # Optimized to avoid N+1: Prefetch assignments if CourseService.get_courses_by_teacher doesn't already.
+        # Assuming CourseService.get_courses_by_teacher returns a list of Course objects.
+        # If assignments are not already prefetched by the service method,
+        # we would ideally modify the service method.
+        # For now, let's assume the service might not prefetch, and try to do it here if possible,
+        # or acknowledge this as a place for potential service layer optimization.
+        # A direct prefetch here on the result of a service call is tricky.
+        # The best fix is within CourseService.get_courses_by_teacher or by changing how assignments are fetched.
+
+        # Let's adjust how recent_assignments are collected to be more direct.
+        # This still might be N queries if get_course_assignments is not optimized.
+        # The ideal fix is to get all assignments for the teacher's courses in one go.
+        
+        # revised_courses = Course.select().where(Course.teacher == user_id).prefetch(Assignment)
+        # recent_assignments = []
+        # for course in revised_courses:
+        #    recent_assignments.extend(list(course.assignments))
+
+        # For a simpler immediate fix in the view, let's get all assignments for the teacher's courses
+        course_ids = [c.id for c in courses]
+        if course_ids:
+            recent_assignments = list(Assignment.select().where(Assignment.course_id.in_(course_ids)))
+        else:
+            recent_assignments = []
+            
         # 按截止日期排序，取前5个
         recent_assignments.sort(key=lambda x: x.due_date, reverse=True)
         context['recent_assignments'] = recent_assignments[:5]

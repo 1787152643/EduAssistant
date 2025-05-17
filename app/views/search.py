@@ -90,10 +90,11 @@ def manage_knowledge():
         return redirect(url_for('search.index'))
     
     from app.models.knowledge_base import KnowledgeBase
+    from app.models.course import Course
     
     if UserService.has_role(user, 'admin'):
         # 管理员可以看到所有条目
-        entries = KnowledgeBase.select()
+        entries = KnowledgeBase.select().prefetch(Course)
     else:
         # 教师只能看到自己课程的条目
         courses = CourseService.get_courses_by_teacher(user_id)
@@ -102,7 +103,7 @@ def manage_knowledge():
         entries = KnowledgeBase.select().where(
             (KnowledgeBase.course_id.in_(course_ids)) |
             (KnowledgeBase.course_id.is_null())
-        )
+        ).prefetch(Course)
     
     return render_template('search/manage.html', entries=entries)
 

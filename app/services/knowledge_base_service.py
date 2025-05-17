@@ -72,7 +72,12 @@ class KnowledgeBaseService:
         
         results = []
         if len(search_results["ids"]) > 0:
-            for i, vector_id in enumerate(search_results["ids"][0]):
+            vector_ids_from_search = search_results["ids"][0]
+            # Batch fetch KnowledgeBase records
+            db_records_list = list(KnowledgeBase.select().where(KnowledgeBase.vector_id.in_(vector_ids_from_search)))
+            db_records_map = {record.vector_id: record for record in db_records_list}
+
+            for i, vector_id in enumerate(vector_ids_from_search):
                 metadata = search_results["metadatas"][0][i]
                 document = search_results["documents"][0][i]
                 distance = None
@@ -83,8 +88,8 @@ class KnowledgeBaseService:
                 if course_id is not None and metadata["course_id"] != course_id:
                     continue
                 
-                # 获取完整记录
-                db_record = KnowledgeBase.get_or_none(KnowledgeBase.vector_id == vector_id)
+                # 获取完整记录 from the prefetched map
+                db_record = db_records_map.get(vector_id)
                 
                 results.append({
                     "id": metadata["id"],

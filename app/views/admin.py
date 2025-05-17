@@ -28,7 +28,7 @@ def index():
 @admin_bp.route('/users')
 @admin_required
 def users():
-    all_users = User.select()
+    all_users = User.select().prefetch(UserRole.select().prefetch(Role))
     return render_template('admin/users.html', users=all_users)
 
 @admin_bp.route('/users/<int:user_id>', methods=['GET', 'POST'])

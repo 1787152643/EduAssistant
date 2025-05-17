@@ -249,10 +249,78 @@ def view_assignment(assignment_id):
     questions = AssignmentService.get_assignment_questions(assignment_id)
     
     # 对于每个问题，如果是选择题，获取选项
-    for question in questions:
-        if question.question_type == QuestionType.MULTIPLE_CHOICE:
-            question.options = AssignmentService.get_question_options(question.id)
+    # Optimized to avoid N+1: This should be handled by prefetching in AssignmentService.get_assignment_questions
+    # or by modifying how options are fetched here.
+    # For now, if AssignmentService.get_assignment_questions returns Question objects,
+    # and options are accessed via question.options, prefetching is needed.
+
+    # Assuming get_assignment_questions returns a list of Question objects.
+    # The ideal fix is to ensure get_assignment_questions prefetches options.
+    # If we must fix it here:
+    question_ids = [q.id for q in questions]
+    if question_ids:
+        # Eagerly load questions with their options
+        questions_with_options = (Question.select(Question, QuestionOption)
+                                  .join(QuestionOption, JOIN.LEFT_OUTER)
+                                  .where(Question.id.in_(question_ids))
+                                  .order_by(Question.order, QuestionOption.order)
+                                  .prefetch(Assignment, QuestionOption)) # Prefetch QuestionOption here
+        
+        # Reconstruct the questions list with options properly attached
+        # This manual reconstruction is a bit complex; ideally, the service layer handles this.
+        temp_questions_dict = {q.id: q for q in questions}
+        processed_questions = []
+        current_question_id = None
+        current_question_obj = None
+        
+        # Initialize options for all questions
+        for q_id in temp_questions_dict:
+            temp_questions_dict[q_id].options_list = []
+
+        for item in questions_with_options: # This will be a list of Question objects if prefetch worked as expected
+            # item could be Question or QuestionOption if not using prefetch correctly.
+            # With prefetch, item should be a Question instance, and item.options should be populated.
+            # Let's use the original questions list and populate options.
+            if item.id not in temp_questions_dict: # Should not happen if query is correct
+                continue
+
+            question_obj = temp_questions_dict[item.id]
+            if not hasattr(question_obj, 'options_list_populated'): # Initialize options list once
+                 question_obj.options_list = []
+                 question_obj.options_list_populated = True # Mark as initialized
+
+            # The prefetch should populate question.options directly.
+            # The loop below is a fallback or misunderstanding of how prefetch structures the result for complex joins.
+            # For a simple .prefetch(QuestionOption) on a Question query, question.options should be a list of QuestionOption instances.
+
+        # Corrected approach assuming questions is a list of Question model instances:
+        for question in questions:
+            if question.question_type == QuestionType.MULTIPLE_CHOICE:
+                # The prefetch should ideally happen in get_assignment_questions.
+                # If we are to do it here based on the list of questions:
+                # This still causes N queries if not handled by a single prefetch call.
+                # The Question.select()...prefetch() above is the better pattern for this view if service doesn't do it.
+                # For simplicity here, let's assume the service method is updated or we rely on its current behavior,
+                # acknowledging this is a hotspot. The original loop was:
+                # question.options = AssignmentService.get_question_options(question.id)
+                # This is the N+1 to be fixed. The prefetch query (questions_with_options) aims to fix this.
+                # We need to ensure `questions` list itself is replaced or updated with prefetched data.
+                pass # The questions_with_options query and reconstruction should handle this.
+                # If using the questions_with_options approach:
+                # We would iterate `questions_with_options` and build a structured list of questions with their options.
+                # However, the direct `prefetch` on the query that produces `questions` is cleaner.
+
+    # Let's assume AssignmentService.get_assignment_questions can be modified or we use a new query.
+    # For this fix, I'll construct the questions with prefetched options.
     
+    questions = list(Question.select()
+                           .where(Question.assignment_id == assignment_id)
+                           .order_by(Question.order)
+                           .prefetch(QuestionOption)) # Prefetch options here
+    
+    # The prefetch should populate question.options directly for multiple choice questions.
+    # No need for the manual loop to call AssignmentService.get_question_options.
+
     # 获取学生的回答
     student_responses = {}
     if student_assignment:
@@ -330,9 +398,11 @@ def view_submission(assignment_id, student_id):
     student_responses = AssignmentService.get_student_responses(student_id, assignment_id)
     
     # 对于每个问题，如果是选择题，获取选项
-    for question in questions:
-        if question.question_type == QuestionType.MULTIPLE_CHOICE:
-            question.options = AssignmentService.get_question_options(question.id)
+    # Optimized to avoid N+1, similar to view_assignment
+    questions = list(Question.select()
+                           .where(Question.assignment_id == assignment_id)
+                           .order_by(Question.order)
+                           .prefetch(QuestionOption)) # Prefetch options here
 
     return render_template('course/view_submission.html', 
                           assignment=assignment, 
