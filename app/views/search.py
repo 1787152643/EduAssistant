@@ -42,7 +42,7 @@ def index():
                          selected_course_id=course_id)
 
 @search_bp.route('/api/search')
-@cache.cached(timeout=60, query_string=True)
+#@cache.cached(timeout=300, query_string=True)
 def api_search():
     """API端点, 用于AJAX搜索请求"""
     if 'user_id' not in session:

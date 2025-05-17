@@ -16,7 +16,7 @@ def index():
     return render_template('analytics/index.html')
 
 @analytics_bp.route('/student/<int:student_id>')
-@cache.cached(timeout=60)
+#@cache.cached(timeout=300)
 def student_analytics(student_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -71,7 +71,7 @@ def student_analytics(student_id):
                           learning_issues=learning_issues)
 
 @analytics_bp.route('/course/<int:course_id>')
-@cache.cached(timeout=60)
+#@cache.cached(timeout=300)
 def course_analytics(course_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

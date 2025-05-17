@@ -5,7 +5,7 @@ from app.ext import cache
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@cache.cached(timeout=60, query_string=True)
+#@cache.cached(timeout=300, query_string=True)
 def login():
     if request.method == 'POST':
         username = request.form.get('username')

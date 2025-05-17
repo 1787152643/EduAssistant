@@ -19,7 +19,7 @@ def initialize_extensions():
             user=os.getenv("DATABASE_USER"),
             password=os.getenv("DATABASE_PASSWORD"),
             port=os.getenv("DATABASE_PORT"),
-            max_connections=8,          # 必须大于 Gunicorn 的 worker 数量
+            max_connections=9,          # 必须大于 Gunicorn 的 worker 数量
             stale_timeout=300,           # 空闲连接回收时间（秒）
             #autoconnect=False            # 推荐关闭自动连接
     )
