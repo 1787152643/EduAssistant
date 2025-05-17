@@ -4,6 +4,8 @@ from app.services.course_service import CourseService
 from app.models.user import User
 from app.models.course import Course
 
+from app.ext import cache
+
 analytics_bp = Blueprint('analytics', __name__, url_prefix='/analytics')
 
 @analytics_bp.route('/')
@@ -14,6 +16,7 @@ def index():
     return render_template('analytics/index.html')
 
 @analytics_bp.route('/student/<int:student_id>')
+@cache.cached(timeout=60)
 def student_analytics(student_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -68,6 +71,7 @@ def student_analytics(student_id):
                           learning_issues=learning_issues)
 
 @analytics_bp.route('/course/<int:course_id>')
+@cache.cached(timeout=60)
 def course_analytics(course_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

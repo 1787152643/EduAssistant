@@ -9,9 +9,12 @@ from app.models.assignment import Assignment, Question, QuestionOption, Question
 from datetime import datetime
 import json
 
+from app.ext import cache
+
 course_bp = Blueprint('course', __name__, url_prefix='/course')
 
 @course_bp.route('/')
+@cache.cached(timeout=60)
 def index():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -58,6 +61,7 @@ def create():
     return render_template('course/create.html')
 
 @course_bp.route('/<int:course_id>')
+@cache.cached(timeout=60)
 def view(course_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -210,6 +214,7 @@ def create_assignment(course_id):
     return render_template('course/create_assignment.html', course=course)
 
 @course_bp.route('/assignment/<int:assignment_id>')
+@cache.cached(timeout=60)
 def view_assignment(assignment_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

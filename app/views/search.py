@@ -4,6 +4,8 @@ from app.services.course_service import CourseService
 from app.services.user_service import UserService
 from app.models.user import User
 
+from app.ext import cache
+
 search_bp = Blueprint('search', __name__, url_prefix='/search')
 
 @search_bp.route('/')
@@ -40,6 +42,7 @@ def index():
                          selected_course_id=course_id)
 
 @search_bp.route('/api/search')
+@cache.cached(timeout=60, query_string=True)
 def api_search():
     """API端点, 用于AJAX搜索请求"""
     if 'user_id' not in session:
